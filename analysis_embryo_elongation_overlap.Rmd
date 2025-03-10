@@ -1,0 +1,462 @@
+---
+title: "Chick Embryo Elongation"
+author: "Isabel Duarte"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_vignette:
+    code_folding: "show"
+    toc: true
+    toc_depth: 3
+---
+
+```{r setup, include = FALSE}
+knitr::opts_knit$set(root.dir = here::here())
+knitr::opts_chunk$set(
+  echo = TRUE,
+  collapse = TRUE,
+  comment = '#>',
+  message = FALSE,
+  warning = FALSE,
+  out.width = '100%',
+  fig.width = 12,
+  fig.height = 6
+)
+
+```
+
+## Embryo Elongation 
+
+### Embryo elongation analysis | Formatting the input data
+
+**Description** | Create table of differences for measurements of embryo lengths   
+**Dependencies** | Input table with embryo measurement data    
+**Notes** | Based on scripts "growth_analysis_step1.R" and "growth_analysis_step2.R"
+
+```{r step1_tidying, warning=FALSE, message=FALSE, cache=FALSE}
+
+# Load libraries
+library(tidyverse)
+library(viridis)
+library(ggridges)  # for ridge plot visualization
+library(reshape2)  # for reshaping data
+library(patchwork) # to combine plots
+
+## Import dataset
+filename <-  "data_embryo_elongation/input/CorrigidoFINAL_Grelha2_HH4-HH10_IsabelDuarte-alignedTimes_2019-07-01.csv"
+raw.embryo.length <- read.table(file = filename, sep = ";", header = TRUE)
+
+## Transpose the data so that the timepoints are the columns and the measurements per embryo are the rows
+a <- seq(1, 416, 32)
+z <- a + 31
+
+list.per.embryo <- NULL
+for (i in 1:13) {
+  my.rows <- seq(a[i],z[i], by=1)
+  list.per.embryo[[i]] <- t(raw.embryo.length[my.rows,3:11])
+}
+
+list.per.measure <- NULL
+for (i in 1:9) {
+  my.intermediate.list <- NULL
+  for (ii in 1:13) {
+    my.intermediate.list[[ii]] <- list.per.embryo[[ii]][i,]
+  }
+  list.per.measure[[i]] <- do.call(rbind, my.intermediate.list)
+}
+
+## Create data-frame with organized data
+embryo_length <- as.data.frame(do.call(rbind, list.per.measure))
+
+## Add column with embryo number and column with measure number
+my.embryoNr <- rep(paste0("Emb", 1:13),9)
+my.measure <- paste0("Med",rep(1:9, each=13))
+embryo_length <- cbind(my.embryoNr, my.measure, embryo_length)
+
+## Set the correct column names (timepoint)
+my.colnames <- paste0("T", raw.embryo.length$TimePoint[1:32])
+my.colnames <- c("EmbryoNr", "Measure", my.colnames)
+colnames(embryo_length) <- my.colnames
+
+## Inspect the formatted data table
+head(embryo_length, n = c(10,13))
+
+## Cleanup
+rm (my.intermediate.list, i, ii, a, z, list.per.embryo, list.per.measure,
+    my.rows, my.embryoNr, my.measure, my.colnames)
+
+## Save the file with the data formatted -> uncomment when changed
+# write.table(embryo_length, 
+#             "input/input_formatted_embryo_length.csv",
+#             sep = ";",
+#             quote = FALSE,
+#             row.names = FALSE,
+#             col.names = TRUE)
+```
+
+### Embryo elongation analysis | Calculating embryo growth
+
+```{r step1_growth_calculation, eval=TRUE, cache=FALSE}
+
+#### This code chunk was developed by Ramiro Magno (ramiro.magno@gmail.com)
+
+#
+# Calculation of the embryo growth (ratios of length between timepoints)
+#
+
+## embryo_length: two first columns only, i.e., annotation columns only.
+embryo_length_annotation<- dplyr::select(embryo_length, c("EmbryoNr","Measure"))
+## embryo_length without the first two columns (annotation)
+embryo_length_data <- dplyr::select(embryo_length, -c("EmbryoNr","Measure"))
+## Time combination pairs (matrix, each column is a pair)
+time_combn <- combn(colnames(embryo_length_data), 2)
+
+## Calculates the relative growth for two columns of df, indexed by the
+## positions specified in the vector col.
+relative_growth <- function(col, df) {1 - df[, col[1]]/df[, col[2]]}
+
+## Calculate relative growth for each column pair (excluding self-self)
+relative_growth_df <- 
+  apply(time_combn, 2, relative_growth, embryo_length_data) %>%
+  as.data.frame()
+
+## Add colnames following each combination pair.  
+colnames(relative_growth_df) <- paste0("1-",apply(time_combn, 2, paste, collapse = "/"))
+
+## Inspect the results
+head(relative_growth_df, n = c(10,7))
+
+## Write results to file -> uncomment when needed
+# write.table(relative_growth_df,
+#             "data_embryo_elongation/output/output_relative_growth.csv",
+#             sep = ";", quote = FALSE, row.names = FALSE, col.names = TRUE)
+
+```
+
+### Embryo elongation analysis | Growth rate analysis
+
+```{r step1_growth_rates, eval=TRUE, cache=FALSE}
+
+## Calculates the GROWTH RATES between each pairwise combination of timepoints
+## (Tfinal - Tinitial)
+
+## Create matrix of combinations of timepoints to use as delta-time (denominator or rate calculation)
+my_timepoints <- c(-8:23)
+timepoint_combn_rates <- combn(my_timepoints, 2, simplify = FALSE) %>%
+  lapply(rev)
+
+## Combination pairs of columns to calculate numerator of rate (matrix, each column is a pair)
+time_combn_rates <- combn(colnames(embryo_length_data), 2, simplify = FALSE) %>%
+  lapply(rev)
+
+## Function to calculate the growth rate
+rate_growth <- function(col, dftime, dfmeasure) { (dfmeasure[,col[1]]-dfmeasure[,col[2]]) / (dftime[1]-dftime[2]) }
+
+## Growth rate calculation
+rate_growth_df <- 
+  purrr::map2(time_combn_rates,timepoint_combn_rates,rate_growth, embryo_length_data) %>% as.data.frame()
+
+## Add colnames
+colnames(rate_growth_df) <-
+  purrr::map_chr(time_combn_rates, paste, collapse="_") %>% paste0("_by_dt")
+
+## Add the two metadata columns
+rate_growth_df <- cbind (embryo_length_annotation,rate_growth_df)
+ 
+## Inspect the results
+head(rate_growth_df, n=c(10,6))
+
+## Save results to file -> uncomment when needed
+# write.table(rate_growth_df, 
+#             "data_embryo_elongation/output/output_rate_growth.csv",
+#             sep = ";", quote = FALSE, row.names = FALSE, col.names = TRUE)
+
+### NOTE: Create an excel file with the 2 output files in 2 separate sheets, to share with other lab members.
+
+```
+
+### Visualize the embryo length
+
+**Dependencies** Input table with data (this file is the output from the previous chunks).
+
+```{r step2_ploting, message=FALSE, warning=FALSE, eval=TRUE, cache=FALSE}
+
+## Vector with the HH stages ordered 
+my.hh.order <- c("HH4","HH5","HH6","HH7","HH8","HH9","HH10")
+
+# Format dataset
+raw.embryo.length %>%
+  select(Embriao, Estadio, TimePoint, starts_with("Med")) %>%
+  filter(!is.na(Estadio)) %>%
+  mutate_at(vars(Estadio), funs(paste0("HH", .))) %>%
+  mutate(Estadio = factor(Estadio, levels = my.hh.order)) -> clean.embryo.length
+
+## Summary stats
+clean.embryo.length %>%
+  count(Embriao)
+
+clean.embryo.length %>%
+  count(Estadio) 
+
+## Look at data
+clean.embryo.length %>%
+  count(Embriao) %>%
+  plot (.)
+
+## Ridge line plots for LENGTH (all 9 measures)
+for (i in 1:9) {
+  my.xlabs <- c("1.Total embryo length (mm)",
+                "2.Total PS length (mm)", 
+                "3.Notochord length (mm)", 
+                "4.Posterior length (mm)", 
+                "5.PS length (mm)", 
+                "6.PSM length (mm)", 
+                "7.Anterior length (mm)", 
+                "8.Segmented length (mm)", 
+                "9.Head fold length (mm)")
+  plot <-
+    ggplot(clean.embryo.length, mapping=aes(x = clean.embryo.length[,i+3], 
+                                            y = Estadio, fill = Estadio)) +
+    geom_density_ridges(alpha=0.75, rel_min_height = 0.001, scale = 2,
+                        quantile_lines = TRUE, quantiles=2,
+                        jittered_points = TRUE, position = "points_sina",
+                        point_alpha = 0.8) +
+    theme_ridges(grid = TRUE, center_axis_labels = TRUE)+
+    theme(legend.position = "none") +
+    #xlim(c(0, 7.1)) +
+    #scale_x_continuous(breaks = seq(0, 8, 1)) +
+    xlab(my.xlabs[i]) +
+    ylab('HH stage') +
+    ggtitle("Embryo length distribution per HH stage")
+
+  print(plot)
+}
+
+## Ridge line plots for TIME
+plot.time <-
+    ggplot(clean.embryo.length, mapping=aes(x = TimePoint, 
+                                            y = Estadio, fill = Estadio)) +
+    geom_density_ridges(alpha=0.75, rel_min_height = 0.001, scale = 1,
+                        quantile_lines = TRUE, quantiles=2,
+                        jittered_points = TRUE, position = "points_sina",
+                        point_alpha = 0.8) +
+    theme_ridges(grid = TRUE, center_axis_labels = TRUE)+
+    theme(legend.position = "none") +
+    #xlim(c(0, 7.1)) +
+    #scale_x_continuous(breaks = seq(0, 8, 1)) +
+    xlab("Time (min)") +
+    ylab('HH stage') +
+    ggtitle("Embryo time distribution per HH stage")
+
+print(plot.time)
+
+
+#################################################
+## Just one plot for testing VERTICAL ridgeline
+ggplot(clean.embryo.length, mapping=aes(y = Med1, x = Estadio, 
+                                        width = ..density.., fill = Estadio)) +
+  geom_vridgeline(stat="ydensity", trim=FALSE, alpha = 0.85, scale = 1, jittered_points = TRUE) +
+  theme_ridges(grid = TRUE, center_axis_labels = TRUE)+
+  theme(legend.position = "none") +
+  #xlim(c(0, 7.1)) +
+  #scale_x_continuous(breaks = seq(0, 8, 1)) +
+  ylab("1.Total embryo length (mm)") +
+  xlab('HH stage') +
+  ggtitle("Embryo length distribution per HH stage")
+
+## Just one plot for testing HORIZONTAL ridgeline
+ggplot(clean.embryo.length, mapping=aes(x = Med1, y = Estadio, fill = Estadio)) +
+  geom_density_ridges() +
+  theme_ridges()+
+  theme(legend.position = "none")
+
+
+################
+#### EXTRAS ####
+## Individual plots -> uncomment if needed
+# ggplot(clean.embryo.length, mapping=aes(x = Med2, y = Estadio, fill = Estadio)) +
+#   geom_density_ridges() +
+#   theme_ridges()+
+#   theme(legend.position = "none")
+# 
+# ggplot(clean.embryo.length, mapping=aes(x = Med3, y = Estadio, fill = Estadio)) +
+#   geom_density_ridges() +
+#   theme_ridges()+
+#   theme(legend.position = "none")
+# 
+# ggplot(clean.embryo.length, mapping=aes(x = Med4, y = Estadio, fill = Estadio)) +
+#   geom_density_ridges() +
+#   theme_ridges()+
+#   theme(legend.position = "none")
+
+
+#################################################################
+### Save the RData file -> uncomment when needed
+# save.image(file = "data_embryo_elongation/embryo_elongation_analysis.RData")
+
+```
+
+
+### Calculate the overlap between measurement distributions
+
+**Overview of the approach**
+
+The idea is to calculate the integral of the minimum of the two density functions over the range where both have nonzero density. This provides a straightforward measure of similarity between two distributions, and therefore an intuitive way to quantify the overlap between the ridge plots (or kernel density estimates).
+
+**Simple Overlap Calculation**
+
+  1. Estimate Kernel Density: Compute the density estimates for both distributions using the same grid of points.
+  2. Find the Intersection: At each grid point, take the minimum value of the two density functions.
+  3. Integrate the Intersection: Sum (or integrate) these minimum density values across the grid to obtain the overlap score.
+
+Mathematically:
+
+  `Overlap = ∫ min(f1(x), f2(x)) dx`
+
+where f1(x) and f2(x) are the density functions of the two distributions.
+
+**Why This Works**
+
+  1. The approach is scale-invariant (not affected by total number of observations).
+  2. It gives an intuitive measure where 0 means no overlap and 1 means complete overlap (if densities are normalized).
+  3. It does not require complex statistics, just basic density estimation and summation.
+
+#### Functions 
+
+```{r distrib_overlap_functions, class.source = 'fold-hide'}
+
+# Function to compute overlap between two distributions
+calculate_overlap <- function(x1, x2, bw = "SJ", n = 512) {
+  d1 <- density(x1, bw = bw, n = n)
+  d2 <- density(x2, bw = bw, n = n)
+  
+  # Find common range where densities are nonzero
+  lower_bound <- max(min(d1$x), min(d2$x))
+  upper_bound <- min(max(d1$x), max(d2$x))
+  
+  # If there is no overlap, return 0
+  if (lower_bound >= upper_bound) return(0)
+  
+  # Define the function for the minimum of two densities
+  min_density_function <- function(x) {
+    f1 <- approx(d1$x, d1$y, xout = x, rule = 2)$y
+    f2 <- approx(d2$x, d2$y, xout = x, rule = 2)$y
+    pmin(f1, f2)
+  }
+  
+  # Compute the integral over the overlapping range
+  overlap_value <- integrate(min_density_function, lower = lower_bound, upper = upper_bound)$value
+  
+  return(overlap_value)
+}
+
+# Function to compute pairwise overlaps and generate plots
+calculate_pairwise_overlap <- function(data_list, my_name, bw = "SJ", n = 512) {
+  
+  names_list <- str_sort(names(data_list), numeric = TRUE)
+  if (is.null(names_list)) names_list <- paste0("D", seq_along(data_list))
+  
+  n_datasets <- length(data_list)
+  overlap_matrix <- matrix(0, nrow = n_datasets, ncol = n_datasets, dimnames = list(names_list, names_list))
+  
+  for (i in seq_len(n_datasets)) {
+    for (j in seq_len(n_datasets)) {
+      if (i <= j) {
+        overlap_matrix[i, j] <- calculate_overlap(data_list[[i]], data_list[[j]], bw = bw, n = n)
+        overlap_matrix[j, i] <- overlap_matrix[i, j] # Symmetric matrix
+      }
+    }
+  }
+  
+  #
+  # Plots
+  #
+  
+  # More informative names for the measurements
+  my_med_labs <- c(
+    "Med1" = "Med1 | Total embryo length",
+    "Med2" = "Med2 | Total PS length",
+    "Med3" = "Med3 | Notochord length",
+    "Med4" = "Med4 | Posterior length",
+    "Med5" = "Med5 | PS length",
+    "Med6" = "Med6 | PSM length",
+    "Med7" = "Med7 | Anterior length",
+    "Med8" = "Med8 | Segmented length",
+    "Med9" = "Med9 | Head fold length"
+  )
+  
+  # Convert matrix to long format for ggplot
+  overlap_df <- melt(overlap_matrix)
+  colnames(overlap_df) <- c("Distribution1", "Distribution2", "Overlap")
+  
+  # Heatmap plot
+  heatmap_plot <-
+    overlap_df |>
+    filter(as.integer(Distribution2) <= as.integer(Distribution1)) |>
+    ggplot(aes(x = Distribution1, y = Distribution2, fill = Overlap)) +
+    geom_tile() +
+    geom_text(aes(label = round(Overlap, 3)), color = "grey25", size = 5) +
+    scale_fill_gradient(low = "white", high = "salmon") +
+    theme_minimal() +
+    labs(title = paste(my_name, "| Density Overlap"), fill = "Overlap") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  
+  # Convert list to long format for ridge plot
+  ridge_df <- do.call(rbind, lapply(names_list, function(name) {
+    data.frame(Value = data_list[[name]], Distribution = name)
+  }))
+  
+  # Convert Distribution to a factor with numerically ordered levels
+  ridge_df$Distribution <- factor(ridge_df$Distribution, levels = names_list)
+
+  # Ridge plot
+  ridge_plot <- ggplot(ridge_df, aes(x = Value, y = Distribution, fill = Distribution)) +
+    geom_density_ridges(alpha=0.75, rel_min_height = 0.001, scale = 1,
+                        quantile_lines = TRUE, quantiles=2,
+                        jittered_points = TRUE, position = "points_sina",
+                        point_alpha = 0.7, point_size = 1, point_shape = 20) +
+    theme_minimal() +
+    #scale_fill_brewer(palette = "Set3") +
+    labs(title = my_med_labs[my_name], x = "Length (mm)", y = "HH Stage") +
+    theme(legend.position = "none")
+  
+  # Return both plots as a list
+  # return(list(ridge_plot = ridge_plot, heatmap = heatmap_plot, overlap_matrix = overlap_matrix))
+  return(list(ridge_plot = ridge_plot, heatmap = heatmap_plot))
+
+}
+
+```
+
+#### Plots 
+
+```{r distrib_overlap_plots, class.source = 'fold-hide', message=FALSE, warning=FALSE}
+
+# Format the input data as list 
+clean_embryo_length_list <- clean.embryo.length |>
+  select(-TimePoint, -Embriao) |>
+  pivot_longer(-Estadio, names_to = "Med", values_to = "Length") |>
+  drop_na() |>
+  group_by(Med, Estadio) |>
+  summarise(Length = list(Length), .groups = "drop") |>
+  nest(Length = c(Estadio, Length)) |>
+  mutate(Length = map(Length, ~set_names(.x$Length, .x$Estadio))) |>
+  deframe()
+
+
+# Calculate the distribution overlap for all measurements
+overlap_plots <- setNames(
+  lapply(names(clean_embryo_length_list), function(name) {
+    calculate_pairwise_overlap(clean_embryo_length_list[[name]], name)
+  }),
+  names(clean_embryo_length_list)
+)
+
+# Print the plots
+combined_plots <- lapply(overlap_plots, function(sublist) {
+  wrap_plots(sublist, ncol = 2)  # Combines the plots at this level
+})
+
+print(combined_plots)
+
+```
+
