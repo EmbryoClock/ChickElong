@@ -34,9 +34,10 @@ TBA (after manuscript publication).
 
 ### Reproducible data analysis
 
-1.  To **re-run the analysis**, run the code provided in the various
-    RMarkdown notebooks: `chick_elong_[analysis_name].Rmd` files.
+1.  To **re-run the analysis**, run the code provided in the RMarkdown
+    notebooks for each of the analysis performed:
+    `chick_elong_[analysis_name].Rmd` files.
 
-2.  To **inspect the data analysis performed**, just download and open
-    the .html files from each analysis in your favorite browser:
+2.  To just **inspect the data analysis performed**, please download and
+    open in your favorite browser the `.html` files from each analysis:
     `chick_elong_[analysis_name].html` files.
