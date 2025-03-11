@@ -17,7 +17,7 @@ to the chick embryo measurements in early development, including:
 - analyses scripts (using literate programming with Rmarkdown notebooks)
 - results and data visualization.
 
-#### Citations
+### Citation
 
 ##### Scientific article
 
@@ -32,11 +32,11 @@ Marreiros; Raquel P. Andrade
 
 TBA (after manuscript publication).
 
-#### Reproducible data analysis
+### Reproducible data analysis
 
-1.  To re-run the analysis Run the code provided in the various
+1.  To **re-run the analysis**, run the code provided in the various
     RMarkdown notebooks: `chick_elong_[analysis_name].Rmd` files.
 
-2.  To inspect the data analysis performed, just download and open the
-    .html files from each analysis in your favorite browser:
-    `chick_elong_[analysis_name].html`.
+2.  To **inspect the data analysis performed**, just download and open
+    the .html files from each analysis in your favorite browser:
+    `chick_elong_[analysis_name].html` files.
