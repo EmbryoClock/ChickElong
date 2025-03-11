@@ -10,7 +10,7 @@ output:
 ---
 
 ```{r setup, include = FALSE}
-knitr::opts_knit$set(root.dir = here::here())
+#knitr::opts_knit$set(root.dir = here::here())
 knitr::opts_chunk$set(
   echo = TRUE,
   collapse = TRUE,
