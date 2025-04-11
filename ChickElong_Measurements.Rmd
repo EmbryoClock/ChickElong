@@ -601,3 +601,975 @@ for (i in measu){
   
 }
 ```
+
+## Normalize for CSeg
+
+### According to the real time
+
+```{r}
+
+measu_Cseg <- c("C.pPL", "C.PS", "C.N", "N.pPL", "N.PS", "PSM", "C.HF", "SEG")
+
+Tax_norm_CSeg1 <- vector("list", length = 8)
+
+for (i in 1:length(Tax_norm_CSeg1)){
+  Tax_norm_CSeg1[[i]] <- db_original_REF
+}
+
+names(Tax_norm_CSeg1) <- measu_Cseg
+
+
+for (i in measu_Cseg){
+  
+  Tax_norm_CSeg1[[i]]$New_Tax <- Tax_norm_CSeg1[[i]][[i]]/Tax_norm_CSeg1[[i]]$C.Seg
+  Tax_norm_CSeg1[[i]] <- Tax_norm_CSeg1[[i]][!is.na(Tax_norm_CSeg1[[i]]$New_Tax), ]
+  
+}
+```
+
+```{r}
+
+p1_CSeg <- tax_CHF_p(Tax_norm_CSeg1[["C.pPL"]], 'C-pPL')+theme(axis.title.x = element_blank())
+
+p2_CSeg <- tax_CHF_p(Tax_norm_CSeg1[["C.PS"]], 'C-PS')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p3_CSeg <- tax_CHF_p(Tax_norm_CSeg1[["N.PS"]], 'N-PS')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p4_CSeg <- tax_CHF_p(Tax_norm_CSeg1[["PSM"]], 'PSM')+theme(axis.title.x = element_blank())
+
+p5_CSeg <- tax_CHF_p(Tax_norm_CSeg1[["SEG"]], 'SEG')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p6_CSeg <- tax_CHF_p(Tax_norm_CSeg1[["C.N"]], 'C-N')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p7_CSeg <- tax_CHF_p(Tax_norm_CSeg1[["C.HF"]], 'C-HF')
+
+p8_CSeg <- tax_CHF_p(Tax_norm_CSeg1[["N.pPL"]], 'N-pPL')+theme(axis.title.y = element_blank())
+
+
+svg(filename="Crecimento_norm_Cseg.svg", 
+    width=12, 
+    height=10, 
+    pointsize=14)
+
+patchwork::wrap_plots(p1_CSeg, p2_CSeg, p3_CSeg,
+                      p4_CSeg, p5_CSeg, p6_CSeg,
+                      p7_CSeg, p8_CSeg, ncol = 3)
+
+dev.off()
+```
+
+```{r}
+
+#Data frame for min and max time, range, standard deviation and coefficient of variation
+Tax_CSeg_t <- data.frame(matrix(data=NA, nrow = 5, ncol = 8))
+colnames(Tax_CSeg_t) <- measu_Cseg
+rownames(Tax_CSeg_t) <- c("min", "max", "range", "sd", "cv")
+
+for (i in measu_Cseg){
+  
+  Tax_CSeg_t["min",i] <- Tax_norm_CSeg1[[i]]$New_Tax[which.min(Tax_norm_CSeg1[[i]]$Time)]
+  Tax_CSeg_t["max",i] <- Tax_norm_CSeg1[[i]]$New_Tax[which.max(Tax_norm_CSeg1[[i]]$Time)]
+  Tax_CSeg_t["range",i] <- Tax_CSeg_t["max",i] - Tax_CSeg_t["min",i]
+  Tax_CSeg_t["sd",i] <- sd(Tax_norm_CSeg1[[i]]$New_Tax)
+  Tax_CSeg_t["cv",i] <- sd(Tax_norm_CSeg1[[i]]$New_Tax)/mean(Tax_norm_CSeg1[[i]]$New_Tax)
+  
+}
+```
+
+### According to the HH stage
+
+```{r}
+
+#Calculate the median for each measure
+Tax_norm_CSeg2 <- db_original_REF[!is.na(db_original_REF$HHStage), ]
+Tax_norm_CSeg2 <- Tax_norm_CSeg2[, colnames(Tax_norm_CSeg2) %in% c(measu_Cseg, "C.Seg", "HHStage")]
+Tax_norm_CSeg2$HHStage <- as.factor(Tax_norm_CSeg2$HHStage)
+
+Tax_norm_CSeg2_ <- aggregate(. ~ HHStage, data = Tax_norm_CSeg2, FUN = function(x) median(x, na.rm = TRUE), na.action = na.pass)
+Tax_norm_CSeg2_ <- Tax_norm_CSeg2_[!is.na(Tax_norm_CSeg2_$C.Seg),]
+
+
+#Normalize according CSeg
+Tax_norm_CSeg_HH <- vector("list", length = 8)
+
+for (i in 1:length(Tax_norm_CSeg_HH)){
+  Tax_norm_CSeg_HH[[i]] <- Tax_norm_CSeg2_
+}
+
+names(Tax_norm_CSeg_HH) <- measu_Cseg
+
+
+for (i in measu_Cseg){
+  
+  Tax_norm_CSeg_HH[[i]]$New_Tax <- Tax_norm_CSeg_HH[[i]][[i]]/Tax_norm_CSeg_HH[[i]]$C.Seg
+  Tax_norm_CSeg_HH[[i]] <- Tax_norm_CSeg_HH[[i]][!is.na(Tax_norm_CSeg_HH[[i]]$New_Tax), ]
+  
+}
+
+
+#Data frame for min and max hh, range, standard deviation and coefficient of variation
+Tax_CSeg_HH <- data.frame(matrix(data=NA, nrow = 5, ncol = 8))
+colnames(Tax_CSeg_HH) <- measu_Cseg
+rownames(Tax_CSeg_HH) <- c("min", "max", "range", "sd", "cv")
+
+for (i in measu_Cseg){
+  
+  Tax_CSeg_HH["min",i] <- Tax_norm_CSeg_HH[[i]]$New_Tax[which.min(Tax_norm_CSeg_HH[[i]]$HHStage)]
+  Tax_CSeg_HH["max",i] <- Tax_norm_CSeg_HH[[i]]$New_Tax[which.max(Tax_norm_CSeg_HH[[i]]$HHStage)]
+  Tax_CSeg_HH["range",i] <- Tax_CSeg_HH["max",i] - Tax_CSeg_HH["min",i]
+  Tax_CSeg_HH["sd",i] <- sd(Tax_norm_CSeg_HH[[i]]$New_Tax)
+  Tax_CSeg_HH["cv",i] <- sd(Tax_norm_CSeg_HH[[i]]$New_Tax)/mean(Tax_norm_CSeg_HH[[i]]$New_Tax)
+  
+}
+```
+
+## Normalize for C.N
+
+### According to the real time
+
+```{r}
+
+measu_CN <- c("C.pPL", "C.PS", "C.Seg", "N.pPL", "N.PS", "PSM", "C.HF", "SEG")
+
+Tax_norm_CN1 <- vector("list", length = 8)
+
+for (i in 1:length(Tax_norm_CN1)){
+  Tax_norm_CN1[[i]] <- db_original_REF
+}
+
+names(Tax_norm_CN1) <- measu_CN
+
+
+for (i in measu_CN){
+  
+  Tax_norm_CN1[[i]]$New_Tax <- Tax_norm_CN1[[i]][[i]]/Tax_norm_CN1[[i]]$C.N
+  Tax_norm_CN1[[i]] <- Tax_norm_CN1[[i]][!is.na(Tax_norm_CN1[[i]]$New_Tax), ]
+  
+}
+```
+
+```{r}
+
+p1_CN <- tax_CHF_p(Tax_norm_CN1[["C.pPL"]], 'C-pPL')+theme(axis.title.x = element_blank())
+
+p2_CN <- tax_CHF_p(Tax_norm_CN1[["C.PS"]], 'C-PS')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p3_CN <- tax_CHF_p(Tax_norm_CN1[["N.PS"]], 'N-PS')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p4_CN <- tax_CHF_p(Tax_norm_CN1[["PSM"]], 'PSM')+theme(axis.title.x = element_blank())
+
+p5_CN <- tax_CHF_p(Tax_norm_CN1[["SEG"]], 'SEG')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p6_CN <- tax_CHF_p(Tax_norm_CN1[["C.Seg"]], 'C-Seg')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p7_CN <- tax_CHF_p(Tax_norm_CN1[["C.HF"]], 'C-HF')
+
+p8_CN <- tax_CHF_p(Tax_norm_CN1[["N.pPL"]], 'N-pPL')+theme(axis.title.y = element_blank())
+
+
+svg(filename="Crecimento_norm_CN.svg", 
+    width=12, 
+    height=10, 
+    pointsize=14)
+
+patchwork::wrap_plots(p1_CN, p2_CN, p3_CN,
+                      p4_CN, p5_CN, p6_CN,
+                      p7_CN, p8_CN, ncol = 3)
+
+dev.off()
+```
+
+```{r}
+
+#Data frame for min and max time, range, standard deviation and coefficient of variation
+Tax_CN_t <- data.frame(matrix(data=NA, nrow = 5, ncol = 8))
+colnames(Tax_CN_t) <- measu_CN
+rownames(Tax_CN_t) <- c("min", "max", "range", "sd", "cv")
+
+for (i in measu_CN){
+  
+  Tax_CN_t["min",i] <- Tax_norm_CN1[[i]]$New_Tax[which.min(Tax_norm_CN1[[i]]$Time)]
+  Tax_CN_t["max",i] <- Tax_norm_CN1[[i]]$New_Tax[which.max(Tax_norm_CN1[[i]]$Time)]
+  Tax_CN_t["range",i] <- Tax_CN_t["max",i] - Tax_CN_t["min",i]
+  Tax_CN_t["sd",i] <- sd(Tax_norm_CN1[[i]]$New_Tax)
+  Tax_CN_t["cv",i] <- sd(Tax_norm_CN1[[i]]$New_Tax)/mean(Tax_norm_CN1[[i]]$New_Tax)
+  
+}
+```
+
+### According to the HH stage
+
+```{r}
+
+
+#Calculate the median for each measure
+Tax_norm_CN2 <- db_original_REF[!is.na(db_original_REF$HHStage), ]
+Tax_norm_CN2 <- Tax_norm_CN2[, colnames(Tax_norm_CN2) %in% c(measu_CN, "C.N", "HHStage")]
+Tax_norm_CN2$HHStage <- as.factor(Tax_norm_CN2$HHStage)
+
+Tax_norm_CN2_ <- aggregate(. ~ HHStage, data = Tax_norm_CN2, FUN = function(x) median(x, na.rm = TRUE), na.action = na.pass)
+Tax_norm_CN2_ <- Tax_norm_CN2_[!is.na(Tax_norm_CN2_$C.N),]
+
+
+#Normalize according CN
+Tax_norm_CN_HH <- vector("list", length = 8)
+
+for (i in 1:length(Tax_norm_CN_HH)){
+  Tax_norm_CN_HH[[i]] <- Tax_norm_CN2_
+}
+
+names(Tax_norm_CN_HH) <- measu_CN
+
+
+for (i in measu_CN){
+  
+  Tax_norm_CN_HH[[i]]$New_Tax <- Tax_norm_CN_HH[[i]][[i]]/Tax_norm_CN_HH[[i]]$C.N
+  Tax_norm_CN_HH[[i]] <- Tax_norm_CN_HH[[i]][!is.na(Tax_norm_CN_HH[[i]]$New_Tax), ]
+  
+}
+
+
+#Data frame for min and max hh, range, standard deviation and coefficient of variation
+Tax_CN_HH <- data.frame(matrix(data=NA, nrow = 5, ncol = 8))
+colnames(Tax_CN_HH) <- measu_CN
+rownames(Tax_CN_HH) <- c("min", "max", "range", "sd", "cv")
+
+for (i in measu_CN){
+  
+  Tax_CN_HH["min",i] <- Tax_norm_CN_HH[[i]]$New_Tax[which.min(Tax_norm_CN_HH[[i]]$HHStage)]
+  Tax_CN_HH["max",i] <- Tax_norm_CN_HH[[i]]$New_Tax[which.max(Tax_norm_CN_HH[[i]]$HHStage)]
+  Tax_CN_HH["range",i] <- Tax_CN_HH["max",i] - Tax_CN_HH["min",i]
+  Tax_CN_HH["sd",i] <- sd(Tax_norm_CN_HH[[i]]$New_Tax)
+  Tax_CN_HH["cv",i] <- sd(Tax_norm_CN_HH[[i]]$New_Tax)/mean(Tax_norm_CN_HH[[i]]$New_Tax)
+  
+}
+```
+
+## Normalize for C.pPL
+
+### According to the real time
+
+```{r}
+
+measu_CpPL <- c("C.N", "C.PS", "C.Seg", "N.pPL", "N.PS", "PSM", "C.HF", "SEG")
+
+Tax_norm_CpPL1 <- vector("list", length = 8)
+
+for (i in 1:length(Tax_norm_CpPL1)){
+  Tax_norm_CpPL1[[i]] <- db_original_REF
+}
+
+names(Tax_norm_CpPL1) <- measu_CpPL
+
+
+for (i in measu_CpPL){
+  
+  Tax_norm_CpPL1[[i]]$New_Tax <- Tax_norm_CpPL1[[i]][[i]]/Tax_norm_CpPL1[[i]]$C.pPL
+  Tax_norm_CpPL1[[i]] <- Tax_norm_CpPL1[[i]][!is.na(Tax_norm_CpPL1[[i]]$New_Tax), ]
+  
+}
+
+```
+
+```{r}
+
+p1_CpPL <- tax_CHF_p(Tax_norm_CpPL1[["C.N"]], 'C-N')+theme(axis.title.x = element_blank())
+
+p2_CpPL <- tax_CHF_p(Tax_norm_CpPL1[["C.PS"]], 'C-PS')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p3_CpPL <- tax_CHF_p(Tax_norm_CpPL1[["N.PS"]], 'N-PS')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p4_CpPL <- tax_CHF_p(Tax_norm_CpPL1[["PSM"]], 'PSM')+theme(axis.title.x = element_blank())
+
+p5_CpPL <- tax_CHF_p(Tax_norm_CpPL1[["SEG"]], 'SEG')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p6_CpPL <- tax_CHF_p(Tax_norm_CpPL1[["C.Seg"]], 'C-Seg')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p7_CpPL <- tax_CHF_p(Tax_norm_CpPL1[["C.HF"]], 'C-HF')
+
+p8_CpPL <- tax_CHF_p(Tax_norm_CpPL1[["N.pPL"]], 'N-pPL')+theme(axis.title.y = element_blank())
+
+
+svg(filename="Crecimento_norm_CpPL.svg", 
+    width=12, 
+    height=10, 
+    pointsize=14)
+
+patchwork::wrap_plots(p1_CpPL, p2_CpPL, p3_CpPL,
+                      p4_CpPL, p5_CpPL, p6_CpPL,
+                      p7_CpPL, p8_CpPL, ncol = 3)
+
+dev.off()
+```
+
+```{r}
+
+#Data frame for min and max time, range, standard deviation and coefficient of variation
+Tax_CpPL_t <- data.frame(matrix(data=NA, nrow = 5, ncol = 8))
+colnames(Tax_CpPL_t) <- measu_CpPL
+rownames(Tax_CpPL_t) <- c("min", "max", "range", "sd", "cv")
+
+for (i in measu_CpPL){
+  
+  Tax_CpPL_t["min",i] <- Tax_norm_CpPL1[[i]]$New_Tax[which.min(Tax_norm_CpPL1[[i]]$Time)]
+  Tax_CpPL_t["max",i] <- Tax_norm_CpPL1[[i]]$New_Tax[which.max(Tax_norm_CpPL1[[i]]$Time)]
+  Tax_CpPL_t["range",i] <- Tax_CpPL_t["max",i] - Tax_CpPL_t["min",i]
+  Tax_CpPL_t["sd",i] <- sd(Tax_norm_CpPL1[[i]]$New_Tax)
+  Tax_CpPL_t["cv",i] <- sd(Tax_norm_CpPL1[[i]]$New_Tax)/mean(Tax_norm_CpPL1[[i]]$New_Tax)
+  
+}
+```
+
+### According to the HH stage
+
+```{r}
+
+#Calculate the median for each measure
+Tax_norm_CpPL2 <- db_original_REF[!is.na(db_original_REF$HHStage), ]
+Tax_norm_CpPL2 <- Tax_norm_CpPL2[, colnames(Tax_norm_CpPL2) %in% c(measu_CpPL, "C.pPL", "HHStage")]
+Tax_norm_CpPL2$HHStage <- as.factor(Tax_norm_CpPL2$HHStage)
+
+Tax_norm_CpPL2_ <- aggregate(. ~ HHStage, data = Tax_norm_CpPL2, FUN = function(x) median(x, na.rm = TRUE), na.action = na.pass)
+Tax_norm_CpPL2_ <- Tax_norm_CpPL2_[!is.na(Tax_norm_CpPL2_$C.pPL),]
+
+
+#Normalize according CpPL
+Tax_norm_CpPL_HH <- vector("list", length = 8)
+
+for (i in 1:length(Tax_norm_CpPL_HH)){
+  Tax_norm_CpPL_HH[[i]] <- Tax_norm_CpPL2_
+}
+
+names(Tax_norm_CpPL_HH) <- measu_CpPL
+
+
+for (i in measu_CpPL){
+  
+  Tax_norm_CpPL_HH[[i]]$New_Tax <- Tax_norm_CpPL_HH[[i]][[i]]/Tax_norm_CpPL_HH[[i]]$C.pPL
+  Tax_norm_CpPL_HH[[i]] <- Tax_norm_CpPL_HH[[i]][!is.na(Tax_norm_CpPL_HH[[i]]$New_Tax), ]
+  
+}
+
+
+#Data frame for min and max hh, range, standard deviation and coefficient of variation
+Tax_CpPL_HH <- data.frame(matrix(data=NA, nrow = 5, ncol = 8))
+colnames(Tax_CpPL_HH) <- measu_CpPL
+rownames(Tax_CpPL_HH) <- c("min", "max", "range", "sd", "cv")
+
+for (i in measu_CpPL){
+  
+  Tax_CpPL_HH["min",i] <- Tax_norm_CpPL_HH[[i]]$New_Tax[which.min(Tax_norm_CpPL_HH[[i]]$HHStage)]
+  Tax_CpPL_HH["max",i] <- Tax_norm_CpPL_HH[[i]]$New_Tax[which.max(Tax_norm_CpPL_HH[[i]]$HHStage)]
+  Tax_CpPL_HH["range",i] <- Tax_CpPL_HH["max",i] - Tax_CpPL_HH["min",i]
+  Tax_CpPL_HH["sd",i] <- sd(Tax_norm_CpPL_HH[[i]]$New_Tax)
+  Tax_CpPL_HH["cv",i] <- sd(Tax_norm_CpPL_HH[[i]]$New_Tax)/mean(Tax_norm_CpPL_HH[[i]]$New_Tax)
+  
+}
+```
+
+## Normalize for C.PS
+
+### According to the real time
+
+```{r}
+
+measu_CPS <- c("C.N", "C.pPL", "C.Seg", "N.pPL", "N.PS", "PSM", "C.HF", "SEG")
+
+Tax_norm_CPS1 <- vector("list", length = 8)
+
+for (i in 1:length(Tax_norm_CPS1)){
+  Tax_norm_CPS1[[i]] <- db_original_REF
+}
+
+names(Tax_norm_CPS1) <- measu_CPS
+
+
+for (i in measu_CPS){
+  
+  Tax_norm_CPS1[[i]]$New_Tax <- Tax_norm_CPS1[[i]][[i]]/Tax_norm_CPS1[[i]]$C.PS
+  Tax_norm_CPS1[[i]] <- Tax_norm_CPS1[[i]][!is.na(Tax_norm_CPS1[[i]]$New_Tax), ]
+  
+}
+```
+
+```{r}
+
+p1_CPS <- tax_CHF_p(Tax_norm_CPS1[["C.N"]], 'C-N')+theme(axis.title.x = element_blank())
+
+p2_CPS <- tax_CHF_p(Tax_norm_CPS1[["C.pPL"]], 'C-pPL')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p3_CPS <- tax_CHF_p(Tax_norm_CPS1[["N.PS"]], 'N-PS')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p4_CPS <- tax_CHF_p(Tax_norm_CPS1[["PSM"]], 'PSM')+theme(axis.title.x = element_blank())
+
+p5_CPS <- tax_CHF_p(Tax_norm_CPS1[["SEG"]], 'SEG')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p6_CPS <- tax_CHF_p(Tax_norm_CPS1[["C.Seg"]], 'C-Seg')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p7_CPS <- tax_CHF_p(Tax_norm_CPS1[["C.HF"]], 'C-HF')
+
+p8_CPS <- tax_CHF_p(Tax_norm_CPS1[["N.pPL"]], 'N-pPL')+theme(axis.title.y = element_blank())
+
+
+svg(filename="Crecimento_norm_CPS.svg", 
+    width=12, 
+    height=10, 
+    pointsize=14)
+
+patchwork::wrap_plots(p1_CPS, p2_CPS, p3_CPS,
+                      p4_CPS, p5_CPS, p6_CPS,
+                      p7_CPS, p8_CPS, ncol = 3)
+
+dev.off()
+```
+
+```{r}
+
+#Data frame for min and max time, range, standard deviation and coefficient of variation
+Tax_CPS_t <- data.frame(matrix(data=NA, nrow = 5, ncol = 8))
+colnames(Tax_CPS_t) <- measu_CPS
+rownames(Tax_CPS_t) <- c("min", "max", "range", "sd", "cv")
+
+for (i in measu_CPS){
+  
+  Tax_CPS_t["min",i] <- Tax_norm_CPS1[[i]]$New_Tax[which.min(Tax_norm_CPS1[[i]]$Time)]
+  Tax_CPS_t["max",i] <- Tax_norm_CPS1[[i]]$New_Tax[which.max(Tax_norm_CPS1[[i]]$Time)]
+  Tax_CPS_t["range",i] <- Tax_CPS_t["max",i] - Tax_CPS_t["min",i]
+  Tax_CPS_t["sd",i] <- sd(Tax_norm_CPS1[[i]]$New_Tax)
+  Tax_CPS_t["cv",i] <- sd(Tax_norm_CPS1[[i]]$New_Tax)/mean(Tax_norm_CPS1[[i]]$New_Tax)
+  
+}
+```
+
+### According to the HH stage
+
+```{r}
+
+#Calculate the median for each measure
+Tax_norm_CPS2 <- db_original_REF[!is.na(db_original_REF$HHStage), ]
+Tax_norm_CPS2 <- Tax_norm_CPS2[, colnames(Tax_norm_CPS2) %in% c(measu_CPS, "C.PS", "HHStage")]
+Tax_norm_CPS2$HHStage <- as.factor(Tax_norm_CPS2$HHStage)
+
+Tax_norm_CPS2_ <- aggregate(. ~ HHStage, data = Tax_norm_CPS2, FUN = function(x) median(x, na.rm = TRUE), na.action = na.pass)
+Tax_norm_CPS2_ <- Tax_norm_CPS2_[!is.na(Tax_norm_CPS2_$C.PS),]
+
+
+#Normalize according CPS
+Tax_norm_CPS_HH <- vector("list", length = 8)
+
+for (i in 1:length(Tax_norm_CPS_HH)){
+  Tax_norm_CPS_HH[[i]] <- Tax_norm_CPS2_
+}
+
+names(Tax_norm_CPS_HH) <- measu_CPS
+
+
+for (i in measu_CPS){
+  
+  Tax_norm_CPS_HH[[i]]$New_Tax <- Tax_norm_CPS_HH[[i]][[i]]/Tax_norm_CPS_HH[[i]]$C.PS
+  Tax_norm_CPS_HH[[i]] <- Tax_norm_CPS_HH[[i]][!is.na(Tax_norm_CPS_HH[[i]]$New_Tax), ]
+  
+}
+
+
+#Data frame for min and max hh, range, standard deviation and coefficient of variation
+Tax_CPS_HH <- data.frame(matrix(data=NA, nrow = 5, ncol = 8))
+colnames(Tax_CPS_HH) <- measu_CPS
+rownames(Tax_CPS_HH) <- c("min", "max", "range", "sd", "cv")
+
+for (i in measu_CPS){
+  
+  Tax_CPS_HH["min",i] <- Tax_norm_CPS_HH[[i]]$New_Tax[which.min(Tax_norm_CPS_HH[[i]]$HHStage)]
+  Tax_CPS_HH["max",i] <- Tax_norm_CPS_HH[[i]]$New_Tax[which.max(Tax_norm_CPS_HH[[i]]$HHStage)]
+  Tax_CPS_HH["range",i] <- Tax_CPS_HH["max",i] - Tax_CPS_HH["min",i]
+  Tax_CPS_HH["sd",i] <- sd(Tax_norm_CPS_HH[[i]]$New_Tax)
+  Tax_CPS_HH["cv",i] <- sd(Tax_norm_CPS_HH[[i]]$New_Tax)/mean(Tax_norm_CPS_HH[[i]]$New_Tax)
+  
+}
+```
+
+## Normalize for N.pPL
+
+### According to the real time
+
+```{r}
+
+measu_NpPL <- c("C.N", "C.pPL", "C.Seg", "C.PS", "N.PS", "PSM", "C.HF", "SEG")
+
+Tax_norm_NpPL1 <- vector("list", length = 8)
+
+for (i in 1:length(Tax_norm_NpPL1)){
+  Tax_norm_NpPL1[[i]] <- db_original_REF
+}
+
+names(Tax_norm_NpPL1) <- measu_NpPL
+
+
+for (i in measu_NpPL){
+  
+  Tax_norm_NpPL1[[i]]$New_Tax <- Tax_norm_NpPL1[[i]][[i]]/Tax_norm_NpPL1[[i]]$N.pPL
+  Tax_norm_NpPL1[[i]] <- Tax_norm_NpPL1[[i]][!is.na(Tax_norm_NpPL1[[i]]$New_Tax), ]
+  
+}
+```
+
+```{r}
+
+p1_NpPL <- tax_CHF_p(Tax_norm_NpPL1[["C.N"]], 'C-N')+theme(axis.title.x = element_blank())
+
+p2_NpPL <- tax_CHF_p(Tax_norm_NpPL1[["C.pPL"]], 'C-pPL')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p3_NpPL <- tax_CHF_p(Tax_norm_NpPL1[["N.PS"]], 'N-PS')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p4_NpPL <- tax_CHF_p(Tax_norm_NpPL1[["PSM"]], 'PSM')+theme(axis.title.x = element_blank())
+
+p5_NpPL <- tax_CHF_p(Tax_norm_NpPL1[["SEG"]], 'SEG')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p6_NpPL <- tax_CHF_p(Tax_norm_NpPL1[["C.Seg"]], 'C-Seg')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p7_NpPL <- tax_CHF_p(Tax_norm_NpPL1[["C.HF"]], 'C-HF')
+
+p8_NpPL <- tax_CHF_p(Tax_norm_NpPL1[["C.PS"]], 'C-PS')+theme(axis.title.y = element_blank())
+
+
+svg(filename="Crecimento_norm_NpPL.svg", 
+    width=12, 
+    height=10, 
+    pointsize=14)
+
+patchwork::wrap_plots(p1_NpPL, p2_NpPL, p3_NpPL,
+                      p4_NpPL, p5_NpPL, p6_NpPL,
+                      p7_NpPL, p8_NpPL, ncol = 3)
+
+dev.off()
+```
+
+```{r}
+
+#Data frame for min and max time, range, standard deviation and coefficient of variation
+Tax_NpPL_t <- data.frame(matrix(data=NA, nrow = 5, ncol = 8))
+colnames(Tax_NpPL_t) <- measu_NpPL
+rownames(Tax_NpPL_t) <- c("min", "max", "range", "sd", "cv")
+
+for (i in measu_NpPL){
+  
+  Tax_NpPL_t["min",i] <- Tax_norm_NpPL1[[i]]$New_Tax[which.min(Tax_norm_NpPL1[[i]]$Time)]
+  Tax_NpPL_t["max",i] <- Tax_norm_NpPL1[[i]]$New_Tax[which.max(Tax_norm_NpPL1[[i]]$Time)]
+  Tax_NpPL_t["range",i] <- Tax_NpPL_t["max",i] - Tax_NpPL_t["min",i]
+  Tax_NpPL_t["sd",i] <- sd(Tax_norm_NpPL1[[i]]$New_Tax)
+  Tax_NpPL_t["cv",i] <- sd(Tax_norm_NpPL1[[i]]$New_Tax)/mean(Tax_norm_NpPL1[[i]]$New_Tax)
+  
+}
+```
+
+### According to the HH stage
+
+```{r}
+
+
+#Calculate the median for each measure
+Tax_norm_NpPL2 <- db_original_REF[!is.na(db_original_REF$HHStage), ]
+Tax_norm_NpPL2 <- Tax_norm_NpPL2[, colnames(Tax_norm_NpPL2) %in% c(measu_NpPL, "N.pPL", "HHStage")]
+Tax_norm_NpPL2$HHStage <- as.factor(Tax_norm_NpPL2$HHStage)
+
+Tax_norm_NpPL2_ <- aggregate(. ~ HHStage, data = Tax_norm_NpPL2, FUN = function(x) median(x, na.rm = TRUE), na.action = na.pass)
+Tax_norm_NpPL2_ <- Tax_norm_NpPL2_[!is.na(Tax_norm_NpPL2_$N.pPL),]
+
+
+#Normalize according NpPL
+Tax_norm_NpPL_HH <- vector("list", length = 8)
+
+for (i in 1:length(Tax_norm_NpPL_HH)){
+  Tax_norm_NpPL_HH[[i]] <- Tax_norm_NpPL2_
+}
+
+names(Tax_norm_NpPL_HH) <- measu_NpPL
+
+
+for (i in measu_NpPL){
+  
+  Tax_norm_NpPL_HH[[i]]$New_Tax <- Tax_norm_NpPL_HH[[i]][[i]]/Tax_norm_NpPL_HH[[i]]$N.pPL
+  Tax_norm_NpPL_HH[[i]] <- Tax_norm_NpPL_HH[[i]][!is.na(Tax_norm_NpPL_HH[[i]]$New_Tax), ]
+  
+}
+
+
+#Data frame for min and max hh, range, standard deviation and coefficient of variation
+Tax_NpPL_HH <- data.frame(matrix(data=NA, nrow = 5, ncol = 8))
+colnames(Tax_NpPL_HH) <- measu_NpPL
+rownames(Tax_NpPL_HH) <- c("min", "max", "range", "sd", "cv")
+
+for (i in measu_NpPL){
+  
+  Tax_NpPL_HH["min",i] <- Tax_norm_NpPL_HH[[i]]$New_Tax[which.min(Tax_norm_NpPL_HH[[i]]$HHStage)]
+  Tax_NpPL_HH["max",i] <- Tax_norm_NpPL_HH[[i]]$New_Tax[which.max(Tax_norm_NpPL_HH[[i]]$HHStage)]
+  Tax_NpPL_HH["range",i] <- Tax_NpPL_HH["max",i] - Tax_NpPL_HH["min",i]
+  Tax_NpPL_HH["sd",i] <- sd(Tax_norm_NpPL_HH[[i]]$New_Tax)
+  Tax_NpPL_HH["cv",i] <- sd(Tax_norm_NpPL_HH[[i]]$New_Tax)/mean(Tax_norm_NpPL_HH[[i]]$New_Tax)
+  
+}
+```
+
+## Normalize for PSM
+
+### According to the real time
+
+```{r}
+
+measu_PSM <- c("C.N", "C.pPL", "C.Seg", "C.PS", "N.PS", "N.pPL", "C.HF", "SEG")
+
+Tax_norm_PSM1 <- vector("list", length = 8)
+
+for (i in 1:length(Tax_norm_PSM1)){
+  Tax_norm_PSM1[[i]] <- db_original_REF
+}
+
+names(Tax_norm_PSM1) <- measu_PSM
+
+
+for (i in measu_PSM){
+  
+  Tax_norm_PSM1[[i]]$New_Tax <- Tax_norm_PSM1[[i]][[i]]/Tax_norm_PSM1[[i]]$PSM
+  Tax_norm_PSM1[[i]] <- Tax_norm_PSM1[[i]][!is.na(Tax_norm_PSM1[[i]]$New_Tax), ]
+  
+}
+```
+
+```{r}
+
+p1_PSM <- tax_CHF_p(Tax_norm_PSM1[["C.N"]], 'C-N')+theme(axis.title.x = element_blank())
+
+p2_PSM <- tax_CHF_p(Tax_norm_PSM1[["C.pPL"]], 'C-pPL')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p3_PSM <- tax_CHF_p(Tax_norm_PSM1[["N.PS"]], 'N-PS')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p4_PSM <- tax_CHF_p(Tax_norm_PSM1[["N.pPL"]], 'N-pPL')+theme(axis.title.x = element_blank())
+
+p5_PSM <- tax_CHF_p(Tax_norm_PSM1[["SEG"]], 'SEG')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p6_PSM <- tax_CHF_p(Tax_norm_PSM1[["C.Seg"]], 'C-Seg')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p7_PSM <- tax_CHF_p(Tax_norm_PSM1[["C.HF"]], 'C-HF')
+
+p8_PSM <- tax_CHF_p(Tax_norm_PSM1[["C.PS"]], 'C-PS')+theme(axis.title.y = element_blank())
+
+
+svg(filename="Crecimento_norm_PSM.svg", 
+    width=12, 
+    height=10, 
+    pointsize=14)
+
+patchwork::wrap_plots(p1_PSM, p2_PSM, p3_PSM,
+                      p4_PSM, p5_PSM, p6_PSM,
+                      p7_PSM, p8_PSM, ncol = 3)
+
+dev.off()
+```
+
+```{r}
+
+#Data frame for min and max time, range, standard deviation and coefficient of variation
+Tax_PSM_t <- data.frame(matrix(data=NA, nrow = 5, ncol = 8))
+colnames(Tax_PSM_t) <- measu_PSM
+rownames(Tax_PSM_t) <- c("min", "max", "range", "sd", "cv")
+
+for (i in measu_PSM){
+  
+  Tax_PSM_t["min",i] <- Tax_norm_PSM1[[i]]$New_Tax[which.min(Tax_norm_PSM1[[i]]$Time)]
+  Tax_PSM_t["max",i] <- Tax_norm_PSM1[[i]]$New_Tax[which.max(Tax_norm_PSM1[[i]]$Time)]
+  Tax_PSM_t["range",i] <- Tax_PSM_t["max",i] - Tax_PSM_t["min",i]
+  Tax_PSM_t["sd",i] <- sd(Tax_norm_PSM1[[i]]$New_Tax)
+  Tax_PSM_t["cv",i] <- sd(Tax_norm_PSM1[[i]]$New_Tax)/mean(Tax_norm_PSM1[[i]]$New_Tax)
+  
+}
+```
+
+### According to the HH stage
+
+```{r}
+
+#Calculate the median for each measure
+Tax_norm_PSM2 <- db_original_REF[!is.na(db_original_REF$HHStage), ]
+Tax_norm_PSM2 <- Tax_norm_PSM2[, colnames(Tax_norm_PSM2) %in% c(measu_PSM, "PSM", "HHStage")]
+Tax_norm_PSM2$HHStage <- as.factor(Tax_norm_PSM2$HHStage)
+
+Tax_norm_PSM2_ <- aggregate(. ~ HHStage, data = Tax_norm_PSM2, FUN = function(x) median(x, na.rm = TRUE), na.action = na.pass)
+Tax_norm_PSM2_ <- Tax_norm_PSM2_[!is.na(Tax_norm_PSM2_$PSM),]
+
+
+#Normalize according PSM
+Tax_norm_PSM_HH <- vector("list", length = 8)
+
+for (i in 1:length(Tax_norm_PSM_HH)){
+  Tax_norm_PSM_HH[[i]] <- Tax_norm_PSM2_
+}
+
+names(Tax_norm_PSM_HH) <- measu_PSM
+
+
+for (i in measu_PSM){
+  
+  Tax_norm_PSM_HH[[i]]$New_Tax <- Tax_norm_PSM_HH[[i]][[i]]/Tax_norm_PSM_HH[[i]]$PSM
+  Tax_norm_PSM_HH[[i]] <- Tax_norm_PSM_HH[[i]][!is.na(Tax_norm_PSM_HH[[i]]$New_Tax), ]
+  
+}
+
+
+#Data frame for min and max hh, range, standard deviation and coefficient of variation
+Tax_PSM_HH <- data.frame(matrix(data=NA, nrow = 5, ncol = 8))
+colnames(Tax_PSM_HH) <- measu_PSM
+rownames(Tax_PSM_HH) <- c("min", "max", "range", "sd", "cv")
+
+for (i in measu_PSM){
+  
+  Tax_PSM_HH["min",i] <- Tax_norm_PSM_HH[[i]]$New_Tax[which.min(Tax_norm_PSM_HH[[i]]$HHStage)]
+  Tax_PSM_HH["max",i] <- Tax_norm_PSM_HH[[i]]$New_Tax[which.max(Tax_norm_PSM_HH[[i]]$HHStage)]
+  Tax_PSM_HH["range",i] <- Tax_PSM_HH["max",i] - Tax_PSM_HH["min",i]
+  Tax_PSM_HH["sd",i] <- sd(Tax_norm_PSM_HH[[i]]$New_Tax)
+  Tax_PSM_HH["cv",i] <- sd(Tax_norm_PSM_HH[[i]]$New_Tax)/mean(Tax_norm_PSM_HH[[i]]$New_Tax)
+  
+}
+```
+
+## Normalize for N.PS
+
+### According to the real time
+
+```{r}
+
+measu_NPS <- c("C.N", "C.pPL", "C.Seg", "C.PS", "PSM", "N.pPL", "C.HF", "SEG")
+
+Tax_norm_NPS1 <- vector("list", length = 8)
+
+for (i in 1:length(Tax_norm_NPS1)){
+  Tax_norm_NPS1[[i]] <- db_original_REF
+}
+
+names(Tax_norm_NPS1) <- measu_NPS
+
+
+for (i in measu_NPS){
+  
+  Tax_norm_NPS1[[i]]$New_Tax <- Tax_norm_NPS1[[i]][[i]]/Tax_norm_NPS1[[i]]$N.PS
+  Tax_norm_NPS1[[i]] <- Tax_norm_NPS1[[i]][!is.na(Tax_norm_NPS1[[i]]$New_Tax), ]
+  
+}
+```
+
+```{r}
+
+p1_NPS <- tax_CHF_p(Tax_norm_NPS1[["C.N"]], 'C-N')+theme(axis.title.x = element_blank())
+
+p2_NPS <- tax_CHF_p(Tax_norm_NPS1[["C.pPL"]], 'C-pPL')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p3_NPS <- tax_CHF_p(Tax_norm_NPS1[["PSM"]], 'PSM')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p4_NPS <- tax_CHF_p(Tax_norm_NPS1[["N.pPL"]], 'N-pPL')+theme(axis.title.x = element_blank())
+
+p5_NPS <- tax_CHF_p(Tax_norm_NPS1[["SEG"]], 'SEG')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p6_NPS <- tax_CHF_p(Tax_norm_NPS1[["C.Seg"]], 'C-Seg')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p7_NPS <- tax_CHF_p(Tax_norm_NPS1[["C.HF"]], 'C-HF')
+
+p8_NPS <- tax_CHF_p(Tax_norm_NPS1[["C.PS"]], 'C-PS')+theme(axis.title.y = element_blank())
+
+
+svg(filename="Crecimento_norm_NPS.svg", 
+    width=12, 
+    height=10, 
+    pointsize=14)
+
+patchwork::wrap_plots(p1_NPS, p2_NPS, p3_NPS,
+                      p4_NPS, p5_NPS, p6_NPS,
+                      p7_NPS, p8_NPS, ncol = 3)
+
+dev.off()
+```
+
+```{r}
+
+#Data frame for min and max time, range, standard deviation and coefficient of variation
+Tax_NPS_t <- data.frame(matrix(data=NA, nrow = 5, ncol = 8))
+colnames(Tax_NPS_t) <- measu_NPS
+rownames(Tax_NPS_t) <- c("min", "max", "range", "sd", "cv")
+
+for (i in measu_NPS){
+  
+  Tax_NPS_t["min",i] <- Tax_norm_NPS1[[i]]$New_Tax[which.min(Tax_norm_NPS1[[i]]$Time)]
+  Tax_NPS_t["max",i] <- Tax_norm_NPS1[[i]]$New_Tax[which.max(Tax_norm_NPS1[[i]]$Time)]
+  Tax_NPS_t["range",i] <- Tax_NPS_t["max",i] - Tax_NPS_t["min",i]
+  Tax_NPS_t["sd",i] <- sd(Tax_norm_NPS1[[i]]$New_Tax)
+  Tax_NPS_t["cv",i] <- sd(Tax_norm_NPS1[[i]]$New_Tax)/mean(Tax_norm_NPS1[[i]]$New_Tax)
+  
+}
+```
+
+### According to the HH stage
+
+```{r}
+
+#Calculate the median for each measure
+Tax_norm_NPS2 <- db_original_REF[!is.na(db_original_REF$HHStage), ]
+Tax_norm_NPS2 <- Tax_norm_NPS2[, colnames(Tax_norm_NPS2) %in% c(measu_NPS, "N.PS", "HHStage")]
+Tax_norm_NPS2$HHStage <- as.factor(Tax_norm_NPS2$HHStage)
+
+Tax_norm_NPS2_ <- aggregate(. ~ HHStage, data = Tax_norm_NPS2, FUN = function(x) median(x, na.rm = TRUE), na.action = na.pass)
+Tax_norm_NPS2_ <- Tax_norm_NPS2_[!is.na(Tax_norm_NPS2_$N.PS),]
+
+
+#Normalize according NPS
+Tax_norm_NPS_HH <- vector("list", length = 8)
+
+for (i in 1:length(Tax_norm_NPS_HH)){
+  Tax_norm_NPS_HH[[i]] <- Tax_norm_NPS2_
+}
+
+names(Tax_norm_NPS_HH) <- measu_NPS
+
+
+for (i in measu_NPS){
+  
+  Tax_norm_NPS_HH[[i]]$New_Tax <- Tax_norm_NPS_HH[[i]][[i]]/Tax_norm_NPS_HH[[i]]$N.PS
+  Tax_norm_NPS_HH[[i]] <- Tax_norm_NPS_HH[[i]][!is.na(Tax_norm_NPS_HH[[i]]$New_Tax), ]
+  
+}
+
+
+#Data frame for min and max hh, range, standard deviation and coefficient of variation
+Tax_NPS_HH <- data.frame(matrix(data=NA, nrow = 5, ncol = 8))
+colnames(Tax_NPS_HH) <- measu_NPS
+rownames(Tax_NPS_HH) <- c("min", "max", "range", "sd", "cv")
+
+for (i in measu_NPS){
+  
+  Tax_NPS_HH["min",i] <- Tax_norm_NPS_HH[[i]]$New_Tax[which.min(Tax_norm_NPS_HH[[i]]$HHStage)]
+  Tax_NPS_HH["max",i] <- Tax_norm_NPS_HH[[i]]$New_Tax[which.max(Tax_norm_NPS_HH[[i]]$HHStage)]
+  Tax_NPS_HH["range",i] <- Tax_NPS_HH["max",i] - Tax_NPS_HH["min",i]
+  Tax_NPS_HH["sd",i] <- sd(Tax_norm_NPS_HH[[i]]$New_Tax)
+  Tax_NPS_HH["cv",i] <- sd(Tax_norm_NPS_HH[[i]]$New_Tax)/mean(Tax_norm_NPS_HH[[i]]$New_Tax)
+  
+}
+```
+
+## Normalize for SEG
+
+### According to the real time
+
+```{r}
+
+measu_SEG <- c("C.N", "C.pPL", "C.Seg", "C.PS", "PSM", "N.pPL", "C.HF", "N.PS")
+
+Tax_norm_SEG1 <- vector("list", length = 8)
+
+for (i in 1:length(Tax_norm_SEG1)){
+  Tax_norm_SEG1[[i]] <- db_original_REF
+}
+
+names(Tax_norm_SEG1) <- measu_SEG
+
+
+for (i in measu_SEG){
+  
+  Tax_norm_SEG1[[i]]$New_Tax <- Tax_norm_SEG1[[i]][[i]]/Tax_norm_SEG1[[i]]$SEG
+  Tax_norm_SEG1[[i]] <- Tax_norm_SEG1[[i]][!is.na(Tax_norm_SEG1[[i]]$New_Tax), ]
+  
+}
+```
+
+```{r}
+
+p1_SEG <- tax_CHF_p(Tax_norm_SEG1[["C.N"]], 'C-N')+theme(axis.title.x = element_blank())
+
+p2_SEG <- tax_CHF_p(Tax_norm_SEG1[["C.pPL"]], 'C-pPL')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p3_SEG <- tax_CHF_p(Tax_norm_SEG1[["PSM"]], 'PSM')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p4_SEG <- tax_CHF_p(Tax_norm_SEG1[["N.pPL"]], 'N-pPL')+theme(axis.title.x = element_blank())
+
+p5_SEG <- tax_CHF_p(Tax_norm_SEG1[["N.PS"]], 'N-PS')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p6_SEG <- tax_CHF_p(Tax_norm_SEG1[["C.Seg"]], 'C-Seg')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p7_SEG <- tax_CHF_p(Tax_norm_SEG1[["C.HF"]], 'C-HF')
+
+p8_SEG <- tax_CHF_p(Tax_norm_SEG1[["C.PS"]], 'C-PS')+theme(axis.title.y = element_blank())
+
+
+svg(filename="Crecimento_norm_SEG.svg", 
+    width=12, 
+    height=10, 
+    pointsize=14)
+
+patchwork::wrap_plots(p1_SEG, p2_SEG, p3_SEG,
+                      p4_SEG, p5_SEG, p6_SEG,
+                      p7_SEG, p8_SEG, ncol = 3)
+
+dev.off()
+```
+
+```{r}
+
+#Data frame for min and max time, range, standard deviation and coefficient of variation
+Tax_SEG_t <- data.frame(matrix(data=NA, nrow = 5, ncol = 8))
+colnames(Tax_SEG_t) <- measu_SEG
+rownames(Tax_SEG_t) <- c("min", "max", "range", "sd", "cv")
+
+for (i in measu_SEG){
+  
+  Tax_SEG_t["min",i] <- Tax_norm_SEG1[[i]]$New_Tax[which.min(Tax_norm_SEG1[[i]]$Time)]
+  Tax_SEG_t["max",i] <- Tax_norm_SEG1[[i]]$New_Tax[which.max(Tax_norm_SEG1[[i]]$Time)]
+  Tax_SEG_t["range",i] <- Tax_SEG_t["max",i] - Tax_SEG_t["min",i]
+  Tax_SEG_t["sd",i] <- sd(Tax_norm_SEG1[[i]]$New_Tax)
+  Tax_SEG_t["cv",i] <- sd(Tax_norm_SEG1[[i]]$New_Tax)/mean(Tax_norm_SEG1[[i]]$New_Tax)
+  
+}
+```
+
+### According to the HH stage
+
+```{r}
+
+
+#Calculate the median for each measure
+Tax_norm_SEG2 <- db_original_REF[!is.na(db_original_REF$HHStage), ]
+Tax_norm_SEG2 <- Tax_norm_SEG2[, colnames(Tax_norm_SEG2) %in% c(measu_SEG, "SEG", "HHStage")]
+Tax_norm_SEG2$HHStage <- as.factor(Tax_norm_SEG2$HHStage)
+
+Tax_norm_SEG2_ <- aggregate(. ~ HHStage, data = Tax_norm_SEG2, FUN = function(x) median(x, na.rm = TRUE), na.action = na.pass)
+Tax_norm_SEG2_ <- Tax_norm_SEG2_[!is.na(Tax_norm_SEG2_$SEG),]
+
+
+#Normalize according SEG
+Tax_norm_SEG_HH <- vector("list", length = 8)
+
+for (i in 1:length(Tax_norm_SEG_HH)){
+  Tax_norm_SEG_HH[[i]] <- Tax_norm_SEG2_
+}
+
+names(Tax_norm_SEG_HH) <- measu_SEG
+
+
+for (i in measu_SEG){
+  
+  Tax_norm_SEG_HH[[i]]$New_Tax <- Tax_norm_SEG_HH[[i]][[i]]/Tax_norm_SEG_HH[[i]]$SEG
+  Tax_norm_SEG_HH[[i]] <- Tax_norm_SEG_HH[[i]][!is.na(Tax_norm_SEG_HH[[i]]$New_Tax), ]
+  
+}
+
+
+#Data frame for min and max hh, range, standard deviation and coefficient of variation
+Tax_SEG_HH <- data.frame(matrix(data=NA, nrow = 5, ncol = 8))
+colnames(Tax_SEG_HH) <- measu_SEG
+rownames(Tax_SEG_HH) <- c("min", "max", "range", "sd", "cv")
+
+for (i in measu_SEG){
+  
+  Tax_SEG_HH["min",i] <- Tax_norm_SEG_HH[[i]]$New_Tax[which.min(Tax_norm_SEG_HH[[i]]$HHStage)]
+  Tax_SEG_HH["max",i] <- Tax_norm_SEG_HH[[i]]$New_Tax[which.max(Tax_norm_SEG_HH[[i]]$HHStage)]
+  Tax_SEG_HH["range",i] <- Tax_SEG_HH["max",i] - Tax_SEG_HH["min",i]
+  Tax_SEG_HH["sd",i] <- sd(Tax_norm_SEG_HH[[i]]$New_Tax)
+  Tax_SEG_HH["cv",i] <- sd(Tax_norm_SEG_HH[[i]]$New_Tax)/mean(Tax_norm_SEG_HH[[i]]$New_Tax)
+  
+}
+```
