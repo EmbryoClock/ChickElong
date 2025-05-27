@@ -117,6 +117,71 @@ patchwork::wrap_plots(p1, p2, p3,
 dev.off()
 ```
 
+## Scatterplot + lineplot for each measure (hue by culture)
+
+```{r}
+
+db_original_REF$CultureType <- as.factor(db_original_REF$CultureType)
+
+medidasCT <- function(a, b){
+  
+  # Creating the plot
+  zz <- ggplot(data = db_original_REF, aes(x = Time, y = a, group = Embryo, color = CultureType)) +
+        geom_hline(yintercept = seq(0, 8, 1), color = "gray94") +
+    geom_vline(xintercept = seq(-10, 25, 5), color = "gray94") +
+    geom_line(linewidth = 0.7) + 
+    geom_point(size = 1) +
+    theme_minimal() +
+    ggtitle(b) +
+    theme(
+      plot.title = element_text(hjust = 0.5, size = 14),
+      axis.title = element_text(size = 11),
+      axis.text = element_text(size = 10, colour = "black"),
+      axis.line = element_line(color = "black"),
+      axis.ticks = element_line(),
+      legend.text = element_text(size = 11),
+      legend.title = element_blank(),
+      legend.key.size = unit(13, "point"),
+      ) +scale_x_continuous(breaks = c(-10, -5, 0, 5, 10, 15, 20, 25))+
+    xlab("Time (h)") + 
+    ylab("Elongation (mm)")
+  
+  return(zz)
+}
+
+
+p1CT <- medidasCT(db_original_REF$C.pPL, 'C-pPL') + guides(color='none') + theme(axis.title.x = element_blank())
+
+p2CT <- medidasCT(db_original_REF$C.PS, 'C-PS') + guides(color='none')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p3CT <- medidasCT(db_original_REF$C.N, 'C-N') + guides(color='none')+ theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p4CT <- medidasCT(db_original_REF$PSM, 'PSM') + guides(color='none') + theme(axis.title.x = element_blank())
+
+p5CT <- medidasCT(db_original_REF$SEG, 'SEG') + guides(color='none')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p6CT <- medidasCT(db_original_REF$C.HF, 'C-HF')+theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+p7CT <- medidasCT(db_original_REF$C.Seg, 'C-Seg') + guides(color='none')
+
+p8CT <- medidasCT(db_original_REF$N.pPL, 'N-pPL') + guides(color='none')+theme(axis.title.y = element_blank())
+
+p9CT <- medidasCT(db_original_REF$N.PS, 'N-PS') + guides(color='none')+theme(axis.title.y = element_blank())
+
+
+svg(filename="CrescimentoCT.svg",
+    width=12, 
+    height=10, 
+    pointsize=14)
+
+
+patchwork::wrap_plots(p1CT, p2CT, p3CT,
+                      p4CT, p5CT, p6CT,
+                      p7CT, p8CT, p9CT, ncol = 3)
+
+dev.off()
+```
+
 ## Scatter plot to normalized measures
 
 All measures wee normalized by max
