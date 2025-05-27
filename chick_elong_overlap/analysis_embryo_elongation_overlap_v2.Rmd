@@ -52,10 +52,11 @@ library(patchwork) # to combine plots with wrap_plots()
 raw_embryo_length <-
   readr::read_delim(
     file = here::here("chick_elong_overlap/data_embryo_elongation/input/ChickElongQuant_input.csv"),
-    delim = ";",
+    delim = ",",
+    na = "",
     escape_double = FALSE,
     trim_ws = TRUE, 
-    locale = locale(decimal_mark = ",") # Important | To deal with the fact that in Portugal the decimals are commas.
+    locale = locale(decimal_mark = ".") # Important | To deal with the fact that in Portugal, sometimes, the decimals are commas.
   )
 
 #
@@ -188,7 +189,8 @@ ggplot(clean_embryo_length_longer, aes(x = Length_mm, y = HHStage, fill = HHStag
     quantiles = 2,
     jittered_points = TRUE,
     position = "points_sina",
-    point_alpha = 0.8
+    point_alpha = 0.8,
+    point_size = 0.5
   ) +
   theme_ridges(grid = TRUE, center_axis_labels = TRUE) +
   facet_wrap(~Measure, scales = "free_x") +
@@ -222,6 +224,7 @@ for (my_measure in measurements$acronym) {
       position = "points_sina",
       point_alpha = 0.8
     ) +
+    scale_fill_manual(values = scales::hue_pal()(7), limits = levels(clean_embryo_length_longer$HHStage)) +
     theme_ridges(grid = TRUE, center_axis_labels = TRUE) +
     theme(legend.position = "none") +
     labs(
@@ -342,6 +345,7 @@ calculate_pairwise_overlap <- function(data_list, my_name, bw = "SJ", n = 512) {
                         quantile_lines = TRUE, quantiles=2,
                         jittered_points = TRUE, position = "points_sina",
                         point_alpha = 0.7, point_size = 1, point_shape = 20) +
+    scale_fill_manual(values = scales::hue_pal()(7), limits = levels(clean_embryo_length_longer$HHStage)) +
     theme_minimal() +
     #scale_fill_brewer(palette = "Set3") +
     labs(title = measurements[which(measurements$acronym == my_name), ]$my_labs, 
