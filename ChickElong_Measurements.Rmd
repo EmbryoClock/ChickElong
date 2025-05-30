@@ -399,7 +399,6 @@ gtax <- ggplot(valores, aes(x=Measure, y=media, fill=Measure))+
   geom_bar(stat="identity")+
   scale_fill_manual(values = c("C.pPL" = "#3F6E9A", "C.PS" = "#9A68A4", "C.N" = "#F4A652", "PSM" = "#FFD0D2", 'SEG' = '#91FFFF', 'C.HF' = '#B59FEB', 'C.Seg' = '#FFE0B3', 'N.pPL' = '#7ABC6D', 'N.PS' = '#2A883E'))+
   geom_errorbar(aes(ymin=media-desvio, ymax=media+desvio), width=0.4, colour="black", alpha=0.9)+
-  geom_text(aes(label = round(media, 2)), vjust = ifelse(valores$media<0, 1.5, -0.5), color = "black") +
   theme_minimal()+
   scale_x_discrete(labels = c("C.pPL" = "C-pPL", "C.PS" = "C-PS", "C.N" = "C-N", "PSM" = "PSM", 'SEG' = 'SEG', 'C.HF' = 'C-HF', 'C.Seg' = 'C-Seg', 'N.pPL' = 'N-pPL', 'N.PS' = 'N-PS')) +
   theme(legend.position="none",
