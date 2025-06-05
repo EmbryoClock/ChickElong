@@ -43,7 +43,6 @@ library(tidyverse)
 library(viridis)
 library(ggridges)
 ```
-
 ## Import the DataSet
 
 ```{r}
@@ -79,7 +78,7 @@ medidas <- function(a, b){
       legend.key.size = unit(13, "point"),
       ) +scale_x_continuous(breaks = c(-10, -5, 0, 5, 10, 15, 20, 25))+
     xlab("Time (h)") + 
-    ylab("Elongation (mm)")
+    ylab("Length (mm)")
   
   return(zz)
 }
@@ -104,7 +103,7 @@ p8 <- medidas(db_original_REF$N.pPL, 'N-pPL') + guides(color='none')+theme(axis.
 p9 <- medidas(db_original_REF$N.PS, 'N-PS') + guides(color='none')+theme(axis.title.y = element_blank())
 
 
-svg(filename="Crescimento.svg",
+svg(filename="Length.svg",
     width=12, 
     height=10, 
     pointsize=14)
@@ -127,10 +126,10 @@ medidasCT <- function(a, b){
   
   # Creating the plot
   zz <- ggplot(data = db_original_REF, aes(x = Time, y = a, group = Embryo, color = CultureType)) +
-        geom_hline(yintercept = seq(0, 8, 1), color = "gray94") +
+    geom_hline(yintercept = seq(0, 8, 1), color = "gray94") +
     geom_vline(xintercept = seq(-10, 25, 5), color = "gray94") +
-    geom_line(linewidth = 0.7) + 
-    geom_point(size = 1) +
+    geom_line(linewidth = 0.7, alpha = 0.6) +
+    geom_point(size = 0.7, alpha = 0.6) +
     theme_minimal() +
     ggtitle(b) +
     theme(
@@ -141,10 +140,11 @@ medidasCT <- function(a, b){
       axis.ticks = element_line(),
       legend.text = element_text(size = 11),
       legend.title = element_blank(),
-      legend.key.size = unit(13, "point"),
-      ) +scale_x_continuous(breaks = c(-10, -5, 0, 5, 10, 15, 20, 25))+
+      legend.key.size = unit(13, "point")) +
+    scale_x_continuous(breaks = c(-10, -5, 0, 5, 10, 15, 20, 25)) +
     xlab("Time (h)") + 
-    ylab("Elongation (mm)")
+    ylab("Length (mm)")
+
   
   return(zz)
 }
@@ -169,7 +169,7 @@ p8CT <- medidasCT(db_original_REF$N.pPL, 'N-pPL') + guides(color='none')+theme(a
 p9CT <- medidasCT(db_original_REF$N.PS, 'N-PS') + guides(color='none')+theme(axis.title.y = element_blank())
 
 
-svg(filename="CrescimentoCT.svg",
+svg(filename="LengthCT.svg",
     width=12, 
     height=10, 
     pointsize=14)
@@ -215,7 +215,7 @@ medidas_nor <- function(x, y){
           axis.line = element_line(color = "black"),
           legend.text = element_text(size = 11),
           legend.title = element_blank()) +
-    xlab("Time (h)")+ ylab("Elongation (a.u.)")+
+    xlab("Time (h)")+ ylab("Ratio (a.u.)")+
     expand_limits(x=c(-10,26), y=c(0,1)) +
     scale_x_continuous(breaks = c(-10, -5, 0, 5, 10, 15, 20, 25))+
     scale_y_continuous(breaks = c(0.00, 0.25, 0.50, 0.75, 1.00))
@@ -244,7 +244,7 @@ p8_n <- medidas_nor(db_Normalized$N.pPL, 'N-pPL')+theme(axis.title.y = element_b
 p9_n <- medidas_nor(db_Normalized$N.PS, 'N-PS')+theme(axis.title.y = element_blank())
 
 
-svg(filename="Crecimento_Norm.svg", 
+svg(filename="Ratio.svg", 
     width=12, 
     height=10, 
     pointsize=14)
@@ -407,7 +407,7 @@ gtax <- ggplot(valores, aes(x=Measure, y=media, fill=Measure))+
   labs(x = NULL)
 
 
-svg(filename="Elongation_rate.svg", 
+svg(filename="ElongationRate.svg", 
     width=8, 
     height=6, 
     pointsize=14)
@@ -563,7 +563,7 @@ tax_CHF_p <- function(database,measure){
           axis.line = element_line(color = "black"),
           legend.text = element_text(size = 11),
           legend.title = element_blank()) +
-    xlab("Time (h)")+ ylab("Elongation (a.u.)")+
+    xlab("Time (h)")+ ylab("Ratio (a.u.)")+
     expand_limits(x=c(0,26)) +
     scale_x_continuous(breaks = c(0, 5, 10, 15, 20, 25))
   
@@ -589,7 +589,7 @@ p7_CHF <- tax_CHF_p(Tax_norm_CHF1[["C.Seg"]], 'C-Seg')
 p8_CHF <- tax_CHF_p(Tax_norm_CHF1[["N.pPL"]], 'N-pPL')+theme(axis.title.y = element_blank())
 
 
-svg(filename="Crecimento_norm_CHF.svg", 
+svg(filename="RatioCHF.svg", 
     width=12, 
     height=10, 
     pointsize=14)
@@ -710,7 +710,7 @@ p7_CSeg <- tax_CHF_p(Tax_norm_CSeg1[["C.HF"]], 'C-HF')
 p8_CSeg <- tax_CHF_p(Tax_norm_CSeg1[["N.pPL"]], 'N-pPL')+theme(axis.title.y = element_blank())
 
 
-svg(filename="Crecimento_norm_Cseg.svg", 
+svg(filename="RatioCseg.svg", 
     width=12, 
     height=10, 
     pointsize=14)
@@ -831,7 +831,7 @@ p7_CN <- tax_CHF_p(Tax_norm_CN1[["C.HF"]], 'C-HF')
 p8_CN <- tax_CHF_p(Tax_norm_CN1[["N.pPL"]], 'N-pPL')+theme(axis.title.y = element_blank())
 
 
-svg(filename="Crecimento_norm_CN.svg", 
+svg(filename="RatioCN.svg", 
     width=12, 
     height=10, 
     pointsize=14)
@@ -954,7 +954,7 @@ p7_CpPL <- tax_CHF_p(Tax_norm_CpPL1[["C.HF"]], 'C-HF')
 p8_CpPL <- tax_CHF_p(Tax_norm_CpPL1[["N.pPL"]], 'N-pPL')+theme(axis.title.y = element_blank())
 
 
-svg(filename="Crecimento_norm_CpPL.svg", 
+svg(filename="RatioCpPL.svg", 
     width=12, 
     height=10, 
     pointsize=14)
@@ -1075,7 +1075,7 @@ p7_CPS <- tax_CHF_p(Tax_norm_CPS1[["C.HF"]], 'C-HF')
 p8_CPS <- tax_CHF_p(Tax_norm_CPS1[["N.pPL"]], 'N-pPL')+theme(axis.title.y = element_blank())
 
 
-svg(filename="Crecimento_norm_CPS.svg", 
+svg(filename="RatioCPS.svg", 
     width=12, 
     height=10, 
     pointsize=14)
@@ -1196,7 +1196,7 @@ p7_NpPL <- tax_CHF_p(Tax_norm_NpPL1[["C.HF"]], 'C-HF')
 p8_NpPL <- tax_CHF_p(Tax_norm_NpPL1[["C.PS"]], 'C-PS')+theme(axis.title.y = element_blank())
 
 
-svg(filename="Crecimento_norm_NpPL.svg", 
+svg(filename="RatioNpPL.svg", 
     width=12, 
     height=10, 
     pointsize=14)
@@ -1318,7 +1318,7 @@ p7_PSM <- tax_CHF_p(Tax_norm_PSM1[["C.HF"]], 'C-HF')
 p8_PSM <- tax_CHF_p(Tax_norm_PSM1[["C.PS"]], 'C-PS')+theme(axis.title.y = element_blank())
 
 
-svg(filename="Crecimento_norm_PSM.svg", 
+svg(filename="RatioPSM.svg", 
     width=12, 
     height=10, 
     pointsize=14)
@@ -1439,7 +1439,7 @@ p7_NPS <- tax_CHF_p(Tax_norm_NPS1[["C.HF"]], 'C-HF')
 p8_NPS <- tax_CHF_p(Tax_norm_NPS1[["C.PS"]], 'C-PS')+theme(axis.title.y = element_blank())
 
 
-svg(filename="Crecimento_norm_NPS.svg", 
+svg(filename="RatioNPS.svg", 
     width=12, 
     height=10, 
     pointsize=14)
@@ -1560,7 +1560,7 @@ p7_SEG <- tax_CHF_p(Tax_norm_SEG1[["C.HF"]], 'C-HF')
 p8_SEG <- tax_CHF_p(Tax_norm_SEG1[["C.PS"]], 'C-PS')+theme(axis.title.y = element_blank())
 
 
-svg(filename="Crecimento_norm_SEG.svg", 
+svg(filename="RatioSEG.svg", 
     width=12, 
     height=10, 
     pointsize=14)
@@ -1637,3 +1637,5 @@ for (i in measu_SEG){
   
 }
 ```
+
+
