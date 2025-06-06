@@ -361,7 +361,7 @@ calculate_pairwise_overlap <- function(data_list, my_name, bw = "SJ", n = 512) {
 
 ```
 
-### 6. Overlap plots 
+### 6. Overlap plots | Length per HH Stage
 
 ```{r distrib_overlap_plots, message=FALSE, warning=FALSE}
 
@@ -394,7 +394,37 @@ print(combined_plots)
 
 ```
 
-### 7. Session info and save RData
+### 7. Overlap plots | Time per HH Stage
+
+```{r distrib_overlap_time, message=FALSE, warning=FALSE}
+
+# Format the input data as list 
+clean_time_list <- clean_embryo_length |>
+  select(HHStage, Time) |>
+  drop_na() |>
+  group_by(HHStage) |>
+  summarise(Time = list(Time), .groups = "drop") |> 
+  deframe() |> 
+  list(Time = _)
+
+
+# Calculate the distribution overlap for time
+overlap_plots_time <- setNames(
+  lapply(names(clean_time_list), function(name) {
+    calculate_pairwise_overlap(clean_time_list[[name]], name)
+  }),
+  names(clean_time_list)
+)
+
+# Print the plots
+combined_plots_time <- lapply(overlap_plots_time, function(sublist) {
+  patchwork::wrap_plots(sublist, ncol = 2)  # Combines the plots at this level
+})
+
+print(combined_plots_time)
+
+```
+### 8. Session info and save RData
 
 ```{r save_rdata, eval=TRUE}
 
