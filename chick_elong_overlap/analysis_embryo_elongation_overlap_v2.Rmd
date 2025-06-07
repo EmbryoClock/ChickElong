@@ -266,7 +266,7 @@ where f1(x) and f2(x) are the density functions of the two distributions.
   3. It does not require complex statistics, just basic density estimation and summation.
 
 
-```{r distrib_overlap_functions}
+```{r distrib_overlap_functions2, eval=FALSE}
 
 # Function to compute overlap between two distributions
 calculate_overlap <- function(x1, x2, bw = "SJ", n = 512) {
@@ -361,9 +361,118 @@ calculate_pairwise_overlap <- function(data_list, my_name, bw = "SJ", n = 512) {
 
 ```
 
+
+```{r distrib_overlap_functions}
+#
+# Function to compute overlap between two distributions
+#
+calculate_overlap <- function(x1, x2, bw = "SJ", n = 512) {
+  d1 <- density(x1, bw = bw, n = n)
+  d2 <- density(x2, bw = bw, n = n)
+  
+  # Find common range where densities are nonzero
+  lower_bound <- max(min(d1$x), min(d2$x))
+  upper_bound <- min(max(d1$x), max(d2$x))
+  
+  # If there is no overlap, return 0
+  if (lower_bound >= upper_bound) return(0)
+  
+  # Define the function for the minimum of two densities
+  min_density_function <- function(x) {
+    f1 <- approx(d1$x, d1$y, xout = x, rule = 2)$y
+    f2 <- approx(d2$x, d2$y, xout = x, rule = 2)$y
+    pmin(f1, f2)
+  }
+  
+  # Compute the integral over the overlapping range
+  overlap_value <- integrate(min_density_function, lower = lower_bound, upper = upper_bound)$value
+  
+  return(overlap_value)
+}
+
+#
+# Compute pairwise overlap matrix between named numeric vectors
+#
+calculate_pairwise_overlap_matrix <- function(data_list, bw = "SJ", n = 512) {
+  names_list <- str_sort(names(data_list), numeric = TRUE)
+  if (is.null(names_list)) names_list <- paste0("D", seq_along(data_list))
+  
+  n_datasets <- length(data_list)
+  overlap_matrix <- matrix(0, nrow = n_datasets, ncol = n_datasets,
+                           dimnames = list(names_list, names_list))
+  
+  for (i in seq_len(n_datasets)) {
+    for (j in seq_len(n_datasets)) {
+      if (i <= j) {
+        overlap_matrix[i, j] <- calculate_overlap(data_list[[i]], data_list[[j]], bw = bw, n = n)
+        overlap_matrix[j, i] <- overlap_matrix[i, j] # Symmetric
+      }
+    }
+  }
+  
+  return(overlap_matrix)
+}
+
+#
+# Plot heatmap and ridge plot of pairwise overlap results
+#
+plot_pairwise_overlap_results <- function(overlap_matrix, data_list, my_name,
+                                          measurements = NULL, fill_levels = NULL) {
+  names_list <- colnames(overlap_matrix)
+  
+  # Heatmap
+  overlap_df <- reshape2::melt(overlap_matrix)
+  colnames(overlap_df) <- c("Distribution1", "Distribution2", "Overlap")
+  
+  heatmap_plot <- overlap_df |>
+    filter(as.integer(Distribution2) <= as.integer(Distribution1)) |>
+    ggplot(aes(x = Distribution1, y = Distribution2, fill = Overlap)) +
+    geom_tile() +
+    geom_text(aes(label = round(Overlap, 3)), color = "grey25", size = 5) +
+    scale_fill_gradient(low = "white", high = "salmon") +
+    theme_minimal() +
+    labs(title = paste(my_name, "| Density Overlap"), fill = "Overlap") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  
+  # Ridge plot
+  ridge_df <- do.call(rbind, lapply(names_list, function(name) {
+    data.frame(Value = data_list[[name]], Distribution = name)
+  }))
+  
+  ridge_df$Distribution <- factor(ridge_df$Distribution, levels = names_list)
+  
+  ridge_plot <- ggplot(ridge_df, aes(x = Value, y = Distribution, fill = Distribution)) +
+    geom_density_ridges(
+      alpha = 0.75, rel_min_height = 0.001, scale = 1,
+      quantile_lines = TRUE, quantiles = 2,
+      jittered_points = TRUE, position = "points_sina",
+      point_alpha = 0.7, point_size = 1, point_shape = 20
+    ) +
+    theme_minimal() +
+    labs(
+      title = if (!is.null(measurements) && my_name %in% measurements$acronym) {
+        measurements[which(measurements$acronym == my_name), "my_labs", drop = TRUE]
+      } else {
+        my_name
+      },
+      x = "Length (mm)", y = "HH Stage"
+    ) +
+    theme(legend.position = "none")
+  
+  if (!is.null(fill_levels)) {
+    ridge_plot <- ridge_plot +
+      scale_fill_manual(values = scales::hue_pal()(length(fill_levels)), limits = fill_levels)
+  }
+
+  return(list(ridge_plot = ridge_plot, heatmap = heatmap_plot))
+}
+
+```
+
+
 ### 6. Overlap plots | Length per HH Stage
 
-```{r distrib_overlap_plots, message=FALSE, warning=FALSE}
+```{r distrib_overlap_plots, eval=TRUE, message=FALSE, warning=FALSE}
 
 # Format the input data as list 
 clean_embryo_length_list <- clean_embryo_length |>
@@ -378,25 +487,39 @@ clean_embryo_length_list <- clean_embryo_length |>
 
 
 # Calculate the distribution overlap for all measurements
-overlap_plots <- setNames(
-  lapply(names(clean_embryo_length_list), function(name) {
-    calculate_pairwise_overlap(clean_embryo_length_list[[name]], name)
-  }),
+overlap_matrix <- setNames(
+  lapply(clean_embryo_length_list, calculate_pairwise_overlap_matrix),
   names(clean_embryo_length_list)
 )
 
-# Print the plots
-combined_plots <- lapply(overlap_plots, function(sublist) {
-  patchwork::wrap_plots(sublist, ncol = 2)  # Combines the plots at this level
+
+# Plot results
+combined_plots <- lapply(names(overlap_matrix), function(my_name) {
+  
+  # Access the input list and matrix
+  data_list <- clean_embryo_length_list[[my_name]]
+  matrix <- overlap_matrix[[my_name]]
+  
+  # Generate the plots
+  plot_list <- plot_pairwise_overlap_results(
+    overlap_matrix = matrix,
+    data_list = data_list,
+    my_name = my_name,
+    measurements = measurements,  # optional if labels are used
+    fill_levels = levels(clean_embryo_length_longer$HHStage)  # optional
+  )
+  
+  # Combine into one view using patchwork
+  patchwork::wrap_plots(plot_list, ncol = 2)
 })
 
-print(combined_plots)
-
+# Print the plots
+combined_plots
 ```
 
 ### 7. Overlap plots | Time per HH Stage
 
-```{r distrib_overlap_time, message=FALSE, warning=FALSE}
+```{r distrib_overlap_time, eval=FALSE, message=FALSE, warning=FALSE}
 
 # Format the input data as list 
 clean_time_list <- clean_embryo_length |>
@@ -404,24 +527,18 @@ clean_time_list <- clean_embryo_length |>
   drop_na() |>
   group_by(HHStage) |>
   summarise(Time = list(Time), .groups = "drop") |> 
-  deframe() |> 
+  tibble::deframe() |> 
   list(Time = _)
 
 
 # Calculate the distribution overlap for time
-overlap_plots_time <- setNames(
-  lapply(names(clean_time_list), function(name) {
-    calculate_pairwise_overlap(clean_time_list[[name]], name)
-  }),
-  names(clean_time_list)
+overlap_plots_time <- calculate_pairwise_overlap(
+  data_list = clean_time_list$Time,
+  my_name = "Time"
 )
 
 # Print the plots
-combined_plots_time <- lapply(overlap_plots_time, function(sublist) {
-  patchwork::wrap_plots(sublist, ncol = 2)  # Combines the plots at this level
-})
-
-print(combined_plots_time)
+patchwork::wrap_plots(overlap_plots_time, ncol = 2) 
 
 ```
 ### 8. Session info and save RData
