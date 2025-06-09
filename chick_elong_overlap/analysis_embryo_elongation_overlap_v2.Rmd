@@ -159,7 +159,7 @@ ridge_plots_all <- list()
 
 ## Ridge plots | Per Time
 ridge_plots_all$Time <-
-  clean_embryo_length_longer |>
+  clean_embryo_length |>
   ggplot(mapping = aes(x = Time, y =HHStage, fill = HHStage)) +
   geom_density_ridges(
     alpha = 0.75,
@@ -169,7 +169,7 @@ ridge_plots_all$Time <-
     quantiles = 2,
     jittered_points = TRUE,
     position = "points_sina",
-    point_alpha = 0.6,
+    point_alpha = 0.8,
     point_size = 0.5
   ) +
   theme_ridges(grid = TRUE, center_axis_labels = TRUE) +
