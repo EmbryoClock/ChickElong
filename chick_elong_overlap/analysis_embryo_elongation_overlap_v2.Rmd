@@ -147,6 +147,13 @@ clean_embryo_length |>
             color = "black", size = 3.5) +
   theme_minimal() 
 
+
+# ## Save plot
+# ggplot2::ggsave(
+#   filename = here::here("chick_elong_overlap/output/stacked_measures_per_hh.pdf"),
+#   width = 12, 
+#   height = 7)
+
 ```
 
 ### 3. Ridge plots | Time and Length measurements
@@ -238,6 +245,16 @@ for (my_measure in measurements$acronym) {
 
 ## Print all ridge plots
 ridge_plots_all
+
+
+# ## Save each plot as individual PDF
+# purrr::iwalk(ridge_plots_all, ~ggsave(
+#   filename = file.path(here::here("chick_elong_overlap/output/"),
+#                        paste0(.y, "_ridge.pdf")),
+#   plot = .x,
+#   device = "pdf",
+#   width = 12, height = 7
+# ))
 
 ```
 
@@ -393,8 +410,19 @@ combined_overlap_ridge <- purrr::imap(overlap_heatmaps, function(heatmap, name) 
 })
 
 
-# Print combined plots
+## Print combined plots
 combined_overlap_ridge
+
+
+# ## Save each plot as individual PDF
+# purrr::iwalk(combined_overlap_ridge, ~ggsave(
+#   filename = file.path(here::here("chick_elong_overlap/output/"),
+#                        paste0(.y, "_overlap.pdf")),
+#   plot = .x,
+#   device = "pdf",
+#   width = 12, height = 7
+# ))
+
 ```
 
 
