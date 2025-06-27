@@ -1,10 +1,10 @@
-# ChEEQ <a href="https://colab.research.google.com/github/pjmartel/ChEEQ_tool/blob/main/ChEEQ.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a></p>
+# ChEEQ <a href="https://colab.research.google.com/github/EmbryoClock/ChickElong/blob/main/ChEEQ/ChEEQ.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a></p>
 
 ChEEQ is an open-source computational tool for the user-friendly analysis of quantitative data acquired from length measurements of developing chicken embryos. It is implemented in Pyton code on the Google Colab platform, allowing the user to run it without any local installation. To to use the tool, go to the link:
 
-https://nbviewer.org/github/pjmartel/ChEEQ_tool/blob/main/ChEEQ.ipynb
+https://nbviwer.org/github/EmbryoClock/ChickElong/blob/main/ChEEQ/ChEEQ.ipynb
 
-and click on "Open in Colab".
+and click on "Open in Colab"
 
 Follow the instructions on the tool's notebook, and an Excel workbook containing the data will be loaded for analisys. 
 
