@@ -244,7 +244,7 @@ p8_n <- medidas_nor(db_Normalized$N.pPL, 'N-pPL')+theme(axis.title.y = element_b
 p9_n <- medidas_nor(db_Normalized$N.PS, 'N-PS')+theme(axis.title.y = element_blank())
 
 
-svg(filename="Ratio.svg", 
+svg(filename="Norm.svg", 
     width=12, 
     height=10, 
     pointsize=14)
