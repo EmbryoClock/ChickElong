@@ -215,7 +215,7 @@ medidas_nor <- function(x, y){
           axis.line = element_line(color = "black"),
           legend.text = element_text(size = 11),
           legend.title = element_blank()) +
-    xlab("Time (h)")+ ylab("Ratio (a.u.)")+
+    xlab("Time (h)")+ ylab("Length (a.u.)")+
     expand_limits(x=c(-10,26), y=c(0,1)) +
     scale_x_continuous(breaks = c(-10, -5, 0, 5, 10, 15, 20, 25))+
     scale_y_continuous(breaks = c(0.00, 0.25, 0.50, 0.75, 1.00))
