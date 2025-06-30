@@ -23,7 +23,7 @@ to the chick embryo measurements in early development, including:
 
 Title \| A Morphometric Characterization of Early Chick Embryo
 Elongation  
-Authors \| A.C. Maia-Fernandes; Tomas Pais-de-Azevedo; Sara Ramalhete;
+Authors \| A.C. Maia-Fernandes; Tomas Pais-de-Azevedo; Nísia Borralho-Martins; Sara Ramalhete;
 Gabriel Martins; Isabel Palmeirim; Isabel Duarte; Paulo Martel; Ana
 Marreiros; Raquel P. Andrade  
 *Submitted to Developmental Biology*
