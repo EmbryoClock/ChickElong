@@ -13,19 +13,21 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Install and load required packages
 
-Install the required packages (RUN ONLY ONCE - Comment after first usage)
-
 ```{r}
-install.packages("ggplot2")
-install.packages("ggthemes")
-install.packages("FactoMineR")
-install.packages("factoextra")
-install.packages('GGally')
-install.packages("magrittr")
-install.packages("dplyr")
-install.packages("tidyverse")
-install.packages("viridis")
-install.packages("ggridges")
+if (!require("ggplot2")) install.packages("ggplot2", dependencies = TRUE)
+if (!require("ggthemes")) install.packages("ggthemes", dependencies = TRUE)
+if (!require("FactoMineR")) install.packages("FactoMineR", dependencies = TRUE)
+if (!require("factoextra")) install.packages("factoextra", dependencies = TRUE)
+if (!require("GGally")) install.packages("GGally", dependencies = TRUE)
+if (!require("magrittr")) install.packages("magrittr", dependencies = TRUE)
+if (!require("dplyr")) install.packages("dplyr", dependencies = TRUE)
+if (!require("tidyverse")) install.packages("tidyverse", dependencies = TRUE)
+if (!require("tidyr")) install.packages("tidyr", dependencies = TRUE)
+if (!require("viridis")) install.packages("viridis", dependencies = TRUE)
+if (!require("ggridges")) install.packages("ggridges", dependencies = TRUE)
+if (!require("stringr")) install.packages("stringr", dependencies = TRUE)
+if (!require("rstatix")) install.packages("rstatix", dependencies = TRUE)
+if (!require("purrr")) install.packages("purrr", dependencies = TRUE)
 ```
 
 ### Load Required packages
@@ -42,12 +44,17 @@ library(dplyr)
 library(tidyverse)
 library(viridis)
 library(ggridges)
+library(tidyr)
+library(stringr)
+library(rstatix)
+library(purrr)
 ```
 ## Import the DataSet
 
 ```{r}
 
 db_original_REF <- read.csv("./ChickElongQuant_input.csv", sep=";", dec=",")
+#db_original_REF <- read.csv("./ChickElongQuant_input.csv")
 ```
 
 ## Scatterplot + lineplot for each measure (hue by embryo)
@@ -1638,4 +1645,231 @@ for (i in measu_SEG){
 }
 ```
 
+## "Elongation- Culture Type"
 
+```{r}
+
+df <- db_original_REF
+```
+
+### HH analysis
+```{r}
+
+table(df$HHStage, useNA = "ifany")
+```
+
+Select HH5-HH9
+```{r}
+
+df_HH <- df[!is.na(df$HHStage) & df$HHStage >= 5 & df$HHStage <= 9, ]
+```
+
+### Calculate elongation rate
+
+```{r}
+
+elongation_measures_HH <- c("C.pPL", "C.PS", "C.N", "N.pPL", "N.PS",
+                         "PSM", "C.Seg", "SEG", "C.HF")
+
+df_long_HH <- df_HH %>%
+  pivot_longer(cols = all_of(elongation_measures_HH),
+               names_to = "Measure",
+               values_to = "Value")
+
+elongation_rates_HH <- df_long_HH %>%
+  group_by(CultureType, Embryo, Measure) %>%
+  # remove rows where Value is NA
+  filter(!is.na(Value)) %>%
+  # only compute if there are at least 3 non-NA values
+  summarise(
+    Time_min = if (n() >= 1) min(Time, na.rm = TRUE) else NA_real_,
+    Time_max = if (n() >= 1) max(Time, na.rm = TRUE) else NA_real_,
+    Value_min = if (n() >= 1) Value[which.min(Time)] else NA_real_,
+    Value_max = if (n() >= 1) Value[which.max(Time)] else NA_real_,
+    ElongationRate = if (n() > 2)
+      (Value_max - Value_min) / (Time_max - Time_min)
+    else NA_real_,
+    .groups = "drop"
+  )
+
+
+all_combinations_HH <- expand.grid(
+  CultureType = unique(df_HH$CultureType),
+  Embryo = unique(df_HH$Embryo),
+  Measure = elongation_measures_HH
+)
+
+elongation_rates_HH <- all_combinations_HH %>%
+  left_join(elongation_rates_HH, by = c("CultureType", "Embryo", "Measure"))
+```
+
+### Test normality
+
+```{r}
+
+#Elongation rate
+elongation_rates_HH <- elongation_rates_HH %>%
+  filter(is.finite(ElongationRate))
+
+normality_results_HH <- elongation_rates_HH %>%
+  group_by(Measure) %>%
+  summarise(
+    p_value = if (length(unique(ElongationRate)) > 2)
+      shapiro.test(ElongationRate)$p.value
+    else NA_real_,
+    .groups = "drop"
+  ) %>%
+  mutate(
+    Normality = ifelse(is.na(p_value), "Insufficient data",
+                       ifelse(p_value > 0.05, "Normal", "Non-normal"))
+  )
+```
+
+### Comparison between CultureType
+
+```{r}
+
+measures_HH <- unique(elongation_rates_HH$Measure)
+
+comparison_results_HH <- purrr::map_dfr(measures_HH, function(m) {
+  data_sub_HH <- filter(elongation_rates_HH, Measure == m)
+  norm_info_HH <- filter(normality_results_HH, Measure == m)$Normality
+  
+  # Check if the measure is normally distributed overall
+  is_normal <- (norm_info_HH == "Normal")
+  
+  # Ensure there are 2 groups to compare
+  if (n_distinct(data_sub_HH$CultureType) == 2) {
+    if (is_normal) {
+      test_result_HH <- t.test(ElongationRate ~ CultureType, data = data_sub_HH)
+      test_used <- "t-test"
+    } else {
+      test_result <- wilcox.test(ElongationRate ~ CultureType, data = data_sub_HH)
+      test_used <- "Mann–Whitney U"
+    }
+    
+    tibble(
+      Measure = m,
+      Test = test_used,
+      Statistic = unname(test_result_HH$statistic),
+      p_value = unname(test_result_HH$p.value)
+    )
+  } else {
+    tibble(Measure = m, Test = "Not applicable", Statistic = NA_real_, p_value = NA_real_)
+  }
+})
+
+```
+
+```{r}
+
+final_results_HH <- comparison_results_HH %>%
+  left_join(normality_results_HH, by = "Measure") %>%
+  arrange(Measure)
+```
+
+## Analysis considering all HH stages
+
+### Calculate elongation rate
+
+```{r}
+
+elongation_measures <- c("C.pPL", "C.PS", "C.N", "N.pPL", "N.PS",
+                         "PSM", "C.Seg", "SEG", "C.HF")
+
+df_long <- df %>%
+  pivot_longer(cols = all_of(elongation_measures),
+               names_to = "Measure",
+               values_to = "Value")
+
+elongation_rates <- df_long %>%
+  group_by(CultureType, Embryo, Measure) %>%
+  # remove rows where Value is NA
+  filter(!is.na(Value)) %>%
+  # only compute if there are at least 3 non-NA values
+  summarise(
+    Time_min = if (n() >= 1) min(Time, na.rm = TRUE) else NA_real_,
+    Time_max = if (n() >= 1) max(Time, na.rm = TRUE) else NA_real_,
+    Value_min = if (n() >= 1) Value[which.min(Time)] else NA_real_,
+    Value_max = if (n() >= 1) Value[which.max(Time)] else NA_real_,
+    ElongationRate = if (n() > 2)
+      (Value_max - Value_min) / (Time_max - Time_min)
+    else NA_real_,
+    .groups = "drop"
+  )
+
+
+all_combinations <- expand.grid(
+  CultureType = unique(df$CultureType),
+  Embryo = unique(df$Embryo),
+  Measure = elongation_measures
+)
+
+elongation_rates <- all_combinations %>%
+  left_join(elongation_rates, by = c("CultureType", "Embryo", "Measure"))
+```
+
+### Test normality
+
+```{r}
+
+#Elongation rate
+elongation_rates <- elongation_rates %>%
+  filter(is.finite(ElongationRate))
+
+normality_results <- elongation_rates %>%
+  group_by(Measure) %>%
+  summarise(
+    p_value = if (length(unique(ElongationRate)) > 2)
+      shapiro.test(ElongationRate)$p.value
+    else NA_real_,
+    .groups = "drop"
+  ) %>%
+  mutate(
+    Normality = ifelse(is.na(p_value), "Insufficient data",
+                       ifelse(p_value > 0.05, "Normal", "Non-normal"))
+  )
+```
+
+### Comparison between CultureType
+
+```{r}
+
+measures <- unique(elongation_rates$Measure)
+
+comparison_results <- purrr::map_dfr(measures, function(m) {
+  data_sub <- filter(elongation_rates, Measure == m)
+  norm_info <- filter(normality_results, Measure == m)$Normality
+  
+  # Check if the measure is normally distributed overall
+  is_normal <- (norm_info == "Normal")
+  
+  # Ensure there are 2 groups to compare
+  if (n_distinct(data_sub$CultureType) == 2) {
+    if (is_normal) {
+      test_result <- t.test(ElongationRate ~ CultureType, data = data_sub)
+      test_used <- "t-test"
+    } else {
+      test_result <- wilcox.test(ElongationRate ~ CultureType, data = data_sub)
+      test_used <- "Mann–Whitney U"
+    }
+    
+    tibble(
+      Measure = m,
+      Test = test_used,
+      Statistic = unname(test_result$statistic),
+      p_value = unname(test_result$p.value)
+    )
+  } else {
+    tibble(Measure = m, Test = "Not applicable", Statistic = NA_real_, p_value = NA_real_)
+  }
+})
+
+```
+
+```{r}
+
+final_results <- comparison_results %>%
+  left_join(normality_results, by = "Measure") %>%
+  arrange(Measure)
+```
