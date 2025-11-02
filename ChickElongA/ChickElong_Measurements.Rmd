@@ -191,7 +191,7 @@ dev.off()
 
 ## Scatter plot to normalized measures
 
-All measures wee normalized by max
+All measures were normalized by max
 
 ```{r}
 
@@ -1645,14 +1645,14 @@ for (i in measu_SEG){
 }
 ```
 
-## "Elongation- Culture Type"
+## Comparison of culture types
 
 ```{r}
 
 df <- db_original_REF
 ```
 
-### HH analysis
+### From HH5-HH9
 ```{r}
 
 table(df$HHStage, useNA = "ifany")
@@ -1873,3 +1873,4 @@ final_results <- comparison_results %>%
   left_join(normality_results, by = "Measure") %>%
   arrange(Measure)
 ```
+
